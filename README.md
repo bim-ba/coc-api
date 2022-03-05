@@ -43,17 +43,21 @@ $ pip install -r requirements.txt
 ### Basic usage
 
 ```python
+import asyncio
 from client import Client
 
 async def main():
     token = '...' # your token
     coc = Client(token)
 
-    clans = coc.clans(name='bomb', location='ru', max_members=30)
+    clans = await coc.clans(name='bomb', location='ru', max_members=30)
     print(clans)
     # ['#2P8QU22L2', '#2PPYL9928', '#2PPYL9928', ...]
 
-    clan = coc.clan(clans[0])
+    clan = await coc.clan(clans[0])
     print(clan.name, clan.location)
     # bomb Location(id=32000193, isCountry=true, name='russia', countryCode='ru')
+
+if __name__ == '__main__':
+    asyncio.run(main())
 ```
