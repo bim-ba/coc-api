@@ -70,7 +70,7 @@ class ClanWarPlayer:
 class ClanWarInfoClan:
     clanLevel: int
     stars: int
-    destructionPercentage: int
+    destructionPercentage: float
     attacks: Optional[int] = None
     members: Optional[List[ClanWarPlayer]] = None
 
@@ -163,7 +163,6 @@ class Player:
     warStars: int
     attackWins: int
     defenseWins: int
-    builderHallLevel: int
     versusTrophies: int
     bestVersusTrophies: int
     versusBattleWins: int
