@@ -169,28 +169,24 @@ Clan war league is war league of clan. See [League](#league-model)
 
 Clan chat language stores information about primary clan chat language.
 
-Fields:
-```py
-id: int
-name: str
-languageCode: str
-```
-
-`name` always in lowercase.
-
-`languageCode` always in lowercase.
+| Field | Type | Description |
+| :---- | :--: | :---------- |
+| id | `int` | language id |
+| name | `str` | language name, **always in lowercase** |
+| languageCode | `str` | language code, **always in lowercase** |
 
 <h4 id="clan-war-attack-model">ClanWarAttack</h4>
 
 This model describes information about clan war attack. Every attack has attacker and defender, as for it, this model stores only attacker and defender tags, not full [Player](#player-model) because of recursion.
 
-Fields:  
-`attackerTag`: `str` - attacker tag  
-`defenderTag`: `str` - defender tag  
-`stars`: `int` - how many stars attacker obtain  
-`destructionPercentage`: `float` - thats it in range 0.0 to 100%  
-`order`: `int` - map position where attacked base is located  
-`duration`: [`datetime.timedelta`](https://docs.python.org/3/library/datetime.html#timedelta-objects) - <span id="pendulum-duration">how long did the attack last (pendulum may be good here)</span>
+| Field | Type | Description |
+| :---- | :--: | :---------- |
+| attackerTag | `str` | attacker tag |
+| defenderTag | `str` | defender tag |
+| stars | `int` | how many stars attacker obtain |
+| destructionPercentage | `float` | destruction percentage in range 0.0 to 100% |
+| order | `int` | map position where attacked base is located |
+| duration | <code>[`datetime.timedelta`](https://docs.python.org/3/library/datetime.html#timedelta-objects)</code> | <span id="pendulum-duration">how long did the attack last (pendulum may be good here)</span> |
 
 <h4 id="clan-war-player-model">ClanWarPlayer</h4>
 
@@ -202,7 +198,7 @@ This model describes information about player in current clan war and his attack
 | mapPosition | `int` | player map position |
 | opponentAttacks | `int` | it seems to be `len(self.attacks)` |
 | attacks | <code>list[[ClanWarAttack](#clan-war-attack-model)]</code> \| `None` | attacks against opponents, may be `None` if no were made |
-| bestOpponentAttack | [ClanWarAttack](#clan-war-attack-model) \| `None` | best attack in `self.attacks`, based on stars and destruction percentage, may be `None` if no were made |
+| bestOpponentAttack | <code>[ClanWarAttack](#clan-war-attack-model)</code> \| `None` | best attack in `self.attacks`, based on stars and destruction percentage, may be `None` if no were made |
 
 ## TODO
 
