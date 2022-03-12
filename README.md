@@ -1,3 +1,5 @@
+![https://img.shields.io/github/pipenv/locked/python-version/bim-ba/coc-api](https://img.shields.io/github/pipenv/locked/python-version/bim-ba/coc-api)
+
 # <p align="center"> coc-api
 <p align="center"><a href="https://developer.clashofclans.com/#/documentation">Clash of Clans API</a> implemented via Python.
 
