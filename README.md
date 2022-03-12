@@ -196,12 +196,13 @@ Fields:
 
 This model describes information about player in current clan war and his attacks (if made).
 
-Fields:  
-`tag`: `str` - player tag  
-`mapPosition`: `int` - player map position  
-`opponentAttacks`: `int` - it seems to be `len(self.attacks)`  
-`attacks`: `list[ClanWarAttack] | None` - attacks against opponents, may be `None` if no were made  
-`bestOpponentAttack`: `ClanWarAttack | None` - best attack in `self.attacks`, based on stars and destruction percentage (see [ClanWarAttack](#clan-war-attack-model))
+| Field | Type | Description |
+| :---- | :--: | :---------- |
+| tag | `str` | player tag |
+| mapPosition | `int` | player map position |
+| opponentAttacks | `int` | it seems to be `len(self.attacks)` |
+| attacks | <code>list[[ClanWarAttack](#clan-war-attack-model)]</code> \| `None` | attacks against opponents, may be `None` if no were made |
+| bestOpponentAttack | [ClanWarAttack](#clan-war-attack-model) \| `None` | best attack in `self.attacks`, based on stars and destruction percentage, may be `None` if no were made |
 
 ## TODO
 
