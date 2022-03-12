@@ -7,7 +7,7 @@
     </a>
 </p>
 
-# <p align="center"> coc-api
+<h1 align="center">coc-api</h1>
 <p align="center"><a href="https://developer.clashofclans.com/#/documentation">Clash of Clans API</a> implemented via Python.
 
 ## Contents
@@ -19,14 +19,21 @@
     * [Basic usage](#basic-usage)
 * [General API Documentation](#general-api-documentation)
     * [Models](#models)
+        * [BadgeURLs](#badgeurls-model)
+        * [Label](#label-model)
+        * [League](#league-model)
+        * [Location](#location-model)
+        * [ClanLabel](#clan-label-model)
+        * [ClanWarLeague](#clan-war-league-model)
+        * [ClanChatLanguage](#clan-chat-language-model)
     * [Methods](#methods)
     * [Exceptions](#exceptions)
     * [Aliases](#aliases)
+* [TODO](#todo)
 
 ## Getting started
 
-This API is tested with Python 3.9-3.10.
-There is only one way to install this library:
+This API is tested under Python >=3.9.
 
 ### Requirements
 
@@ -86,7 +93,7 @@ All models are immutable, you cant change its contents - only read.
 BadgeURLs is used to store small, medium and large image URLs. BadgeURLs for some models may be missing, also a few models can have missing fields. Thats why it is either `str` or `None`.
 
 Fields:
-```python
+```py
 small: str | None
 medium: str | None
 large: str | None
@@ -97,7 +104,7 @@ large: str | None
 Label is used to store label id, its name and [iconUrls](#badgeurls-model). This model is just a parent for [PlayerLabel](#player-label-model) and [ClanLabel](#clan-label-model). It will never be created directly.
 
 Fields:
-```python
+```py
 id: int
 name: str
 iconUrls: BadgeURLs | None
@@ -118,9 +125,9 @@ graph TD;
 League is used to store league id, its name and [iconUrls](#badgeurls-model). There are 2 types of leagues: [playerLeague](#player-league-model) and [clanLeague](#clan-league-model)
 
 Fields:
-```python
+```py
 id: int
-name: str # <- always in lowercase
+name: str
 iconUrls: BadgeURLs | None
 ```
 
@@ -136,4 +143,72 @@ graph TD;
 
 <h4 id="location-model">Location</h4>
 
-Location is used to store location (really?)
+Location is used to store location id, its name and country code. Location is not always a country (e.g. International), thats why `isCountry` field is exist and `countryCode` may be `None`.
+
+Fields:
+```py
+id: int
+name: str
+isCountry: bool
+countryCode: str | None
+```
+
+`name` always in lowercase.
+
+`countryCode` may be `None` because some locations are not countries.
+
+<h4 id="clan-label-model">ClanLabel</h4>
+
+Clan label is clan label. See [Label](#label-model).
+
+<h4 id="clan-war-league-model">ClanWarLeague</h4>
+
+Clan war league is war league of clan. See [League](#league-model)
+
+<h4 id="clan-chat-language-model">ClanChatLanguage</h4>
+
+Clan chat language stores information about primary clan chat language.
+
+Fields:
+```py
+id: int
+name: str
+languageCode: str
+```
+
+`name` always in lowercase.
+
+`languageCode` always in lowercase.
+
+<h4 id="clan-war-attack-model">ClanWarAttack</h4>
+
+This model describes information about clan war attack. Every attack has attacker and defender, as for it, this model stores only attacker and defender tags, not full [Player](#player-model) because of recursion.
+
+Fields:  
+`attackerTag`: `str` - attacker tag  
+`defenderTag`: `str` - defender tag  
+`stars`: `int` - how many stars attacker obtain  
+`destructionPercentage`: `float` - thats it in range 0.0 to 100%  
+`order`: `int` - map position where attacked base is located  
+`duration`: [`datetime.timedelta`](https://docs.python.org/3/library/datetime.html#timedelta-objects) - <span id="pendulum-duration">how long did the attack last (pendulum may be good here)</span>
+
+<h4 id="clan-war-player-model">ClanWarPlayer</h4>
+
+This model describes information about player in current clan war and his attacks (if made).
+
+Fields:  
+`tag`: `str` - player tag  
+`mapPosition`: `int` - player map position  
+`opponentAttacks`: `int` - it seems to be `len(self.attacks)`  
+`attacks`: `list[ClanWarAttack] | None` - attacks against opponents, may be `None` if no were made  
+`bestOpponentAttack`: `ClanWarAttack | None` - best attack in `self.attacks`, based on stars and destruction percentage (see [ClanWarAttack](#clan-war-attack-model))
+
+## TODO
+
+- [ ] `tests.py`
+- [ ] Testing under Python <=3.9
+- [ ] Models fields corresponds to **snake_case** syntax
+- [ ] Pendulum instead of standard datetime (is it worth it?)
+    - [duration problem](#pendulum-duration)
+- [ ] Comparable [Location](#location-model) and [ClanChatLanguage](#clan-chat-language-model)
+- [ ] Comparable [Player](#player-model) and [ClanWarPlayer](#clan-war-player-model)
