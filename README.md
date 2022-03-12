@@ -92,27 +92,21 @@ All models are immutable, you cant change its contents - only read.
 
 BadgeURLs is used to store small, medium and large image URLs. BadgeURLs for some models may be missing, also a few models can have missing fields. Thats why it is either `str` or `None`.
 
-Fields:
-```py
-small: str | None
-medium: str | None
-large: str | None
-```
+| Field | Type | Description |
+| :---- | :--: | :---------- |
+| small | `str` \| `None` | _optional_. Small icon url |
+| medium | `str` \| `None` | _optional_. Medium icon url |
+| large | `str` \| `None` | _optional_. Large icon url |
 
 <h4 id="label-model">Label</h4>
 
 Label is used to store label id, its name and [iconUrls](#badgeurls-model). This model is just a parent for [PlayerLabel](#player-label-model) and [ClanLabel](#clan-label-model). It will never be created directly.
 
-Fields:
-```py
-id: int
-name: str
-iconUrls: BadgeURLs | None
-```
-
-`name` always in lowercase.
-
-`iconUrls` may be `None` because [ClanLabels](#clan-label-model) dont have icons.
+| Field | Type | Description |
+| :---- | :--: | :---------- |
+| id | `str` | Field unique id |
+| name | `str` | _lowercase_. Field unique name |
+| iconUrls | [`BadgeURLs`](#badgeurls-model) \| `None` | _optional_. Field icons, some labels dont have icons |
 
 ```mermaid
 graph TD;
@@ -124,16 +118,11 @@ graph TD;
 
 League is used to store league id, its name and [iconUrls](#badgeurls-model). There are 2 types of leagues: [playerLeague](#player-league-model) and [clanLeague](#clan-league-model)
 
-Fields:
-```py
-id: int
-name: str
-iconUrls: BadgeURLs | None
-```
-
-`name` always in lowercase.
-
-`iconUrls` may be `None` because some leagues dont have icons.
+| Field | Type | Description |
+| :---- | :--: | :---------- |
+| id | `str` | Field unique id |
+| name | `str` | _lowercase_. Field unique name |
+| iconUrls | [`BadgeURLs`](#badgeurls-model) \| `None` | _optional_. Field icons, some leagues dont have icons |
 
 ```mermaid
 graph TD;
@@ -145,17 +134,12 @@ graph TD;
 
 Location is used to store location id, its name and country code. Location is not always a country (e.g. International), thats why `isCountry` field is exist and `countryCode` may be `None`.
 
-Fields:
-```py
-id: int
-name: str
-isCountry: bool
-countryCode: str | None
-```
-
-`name` always in lowercase.
-
-`countryCode` may be `None` because some locations are not countries.
+| Field | Type | Description |
+| :---- | :--: | :---------- |
+| id | `int` | Location unique id |
+| name | `str` | _lowercase_. Location unique name |
+| isCountry | `bool` | `True` if location is country |
+| countryCode | `str` \| `None` | _optional_. Location country code, may be `None` if location is not country |
 
 <h4 id="clan-label-model">ClanLabel</h4>
 
@@ -163,7 +147,7 @@ Clan label is clan label. See [Label](#label-model).
 
 <h4 id="clan-war-league-model">ClanWarLeague</h4>
 
-Clan war league is war league of clan. See [League](#league-model)
+Clan war league is war league of clan. See [League](#league-model).
 
 <h4 id="clan-chat-language-model">ClanChatLanguage</h4>
 
@@ -171,9 +155,9 @@ Clan chat language stores information about primary clan chat language.
 
 | Field | Type | Description |
 | :---- | :--: | :---------- |
-| id | `int` | language id |
-| name | `str` | language name, **always in lowercase** |
-| languageCode | `str` | language code, **always in lowercase** |
+| id | `int` | Language unique id |
+| name | `str` | _lowercase_. Language unique name |
+| languageCode | `str` | _lowercase_. Language code (like country code) |
 
 <h4 id="clan-war-attack-model">ClanWarAttack</h4>
 
@@ -181,12 +165,12 @@ This model describes information about clan war attack. Every attack has attacke
 
 | Field | Type | Description |
 | :---- | :--: | :---------- |
-| attackerTag | `str` | attacker tag |
-| defenderTag | `str` | defender tag |
-| stars | `int` | how many stars attacker obtain |
-| destructionPercentage | `float` | destruction percentage in range 0.0 to 100% |
-| order | `int` | map position where attacked base is located |
-| duration | <code>[`datetime.timedelta`](https://docs.python.org/3/library/datetime.html#timedelta-objects)</code> | <span id="pendulum-duration">how long did the attack last (pendulum may be good here)</span> |
+| attackerTag | `str` | Attacker tag |
+| defenderTag | `str` | Defender tag |
+| stars | `int` | How many stars attacker obtain |
+| destructionPercentage | `float` | Destruction percentage in range 0.0 to 100% |
+| order | `int` | Map position where attacked base is located |
+| duration | [`datetime.timedelta`](https://docs.python.org/3/library/datetime.html#timedelta-objects) | <span id="pendulum-duration">how long did the attack last (pendulum may be good here)</span> |
 
 <h4 id="clan-war-player-model">ClanWarPlayer</h4>
 
@@ -194,17 +178,17 @@ This model describes information about player in current clan war and his attack
 
 | Field | Type | Description |
 | :---- | :--: | :---------- |
-| tag | `str` | player tag |
-| mapPosition | `int` | player map position |
-| opponentAttacks | `int` | it seems to be `len(self.attacks)` |
-| attacks | <code>list[[ClanWarAttack](#clan-war-attack-model)]</code> \| `None` | attacks against opponents, may be `None` if no were made |
-| bestOpponentAttack | <code>[ClanWarAttack](#clan-war-attack-model)</code> \| `None` | best attack in `self.attacks`, based on stars and destruction percentage, may be `None` if no were made |
+| tag | `str` | Player tag |
+| mapPosition | `int` | Player map position |
+| opponentAttacks | `int` | It seems to be `len(self.attacks)` |
+| attacks | <code>list[[ClanWarAttack](#clan-war-attack-model)]</code> \| `None` | _optional_. Attacks against opponents, may be `None` if no were made |
+| bestOpponentAttack | <code>[ClanWarAttack](#clan-war-attack-model)</code> \| `None` | _optional_. Best attack in `self.attacks`, based on stars and destruction percentage, may be `None` if no were made |
 
 ## TODO
 
 - [ ] `tests.py`
-- [ ] Testing under Python <=3.9
-- [ ] Models fields corresponds to **snake_case** syntax
+- [ ] Testing under _Python <=3.9_
+- [ ] Models fields must corresponds to _snake_case_ syntax
 - [ ] Pendulum instead of standard datetime (is it worth it?)
     - [duration problem](#pendulum-duration)
 - [ ] Comparable [Location](#location-model) and [ClanChatLanguage](#clan-chat-language-model)
