@@ -6,7 +6,7 @@
     <a href="" alt="Status">
         <img src="https://img.shields.io/badge/status-needs review-important"/>
     </a>
-    <a href="https://github.com/bim-ba/coc-api" alt="Contributions">
+    <a href="" alt="Contributions">
         <img src="https://img.shields.io/badge/contributions-welcome-brightgreen">
     </a>
 </p>
