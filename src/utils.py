@@ -9,5 +9,5 @@ def rawtime_to_datetime(raw_data: str):
     return time
 
 def shape_tag(tag: Tag):
-    return f'%23{tag[1:]}'
-    
+    true_tag = tag.upper()
+    return true_tag.replace('#', '%23')

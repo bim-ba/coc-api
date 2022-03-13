@@ -9,7 +9,7 @@ CaseInsensitiveStr = str
 PositiveInt = int
 Url = str
 RelativeUrl = Url
-Tag = str
+Tag = CaseInsensitiveStr
 """
 starts with #, only digits and capital letters, len = 1-9\n
 regex = r'#[1-9A-Z]{1,9}'
@@ -33,11 +33,11 @@ LocationName = CaseInsensitiveStr
 """Russia | Ukraine | United States | Afghanistan"""
 CountryCode = CaseInsensitiveStr
 """RU | UA | US | AF"""
-LabelID = int
+LabelID = PositiveInt
 """29000000 | 29000001 | 29000022"""
 LabelName = CaseInsensitiveStr
 """SomeLabel | AnotherLabel | Legend Label"""
-LeagueID = int
+LeagueID = PositiveInt
 """39000000 | 39000001 | 39000022"""
 LeagueName = CaseInsensitiveStr
 """Unranked | Bronze League III | Legend League"""

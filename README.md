@@ -44,8 +44,43 @@
         * [ClanChatLanguage](#clan-chat-language-model)
         * [GoldPass](#goldpass-model)
     * [Methods](#methods)
+        * [clans](#method-clans)
+        * [clan](#method-clan)
+        * [player](#method-player)
+        * [clan_rankings](#method-clan-rankings)
+        * [player_rankings](#method-player-rankings)
+        * [clan_versus_rankings](#method-clan-versus-rankings)
+        * [player_versus_rankings](#method-player-versus-rankings)
+        * [goldpass](#method-goldpass)
+        * [_fetch](#method-__fetch__)
+        * [_validate_response](#method-__validate_response__)
+        * [_init_location_list](#method-__init_location_list__)
+        * [_init_clan_labels_list](#method-__init_clan_labels_list__)
+        * [_get_location_id](#method-__get_location_id__)
+        * [_get_clan_label_id](#method-__get_clan_label_id__)
     * [Exceptions](#exceptions)
+        * [UnknownLocationError](#exception-unknown-location-error)
+        * [UnknownClanLabelError](#exception-unknown-clan-label-error)
     * [Aliases](#aliases)
+        * [CaseSensitiveStr](#alias-case-sensitive-str)
+        * [CaseInsensitiveStr](#alias-case-insensitive-str)
+        * [PositiveInt](#alias-positive-int)
+        * [Url](#alias-url)
+        * [RelativeUrl](#alias-relative-url)
+        * [Tag](#alias-tag)
+        * [ClanType](#alias-clan-type)
+        * [ClanRole](#alias-clan-role)
+        * [ClanWarFrequency](#alias-clan-war-frequency)
+        * [ClanWarPreference](#alias-clan-war-preference)
+        * [ClanWarResultL](#alias-clan-war-result-l)
+        * [ClanWarState](#alias-clan-war-state)
+        * [Village](#alias-village)
+        * [LocationName](#alias-location-name)
+        * [CountryCode](#alias-country-code)
+        * [LabelID](#alias-label-id)
+        * [LabelName](#alias-label-name)
+        * [LeagueID](#alias-league-id)
+        * [LeagueName](#alias-league-name)
 * [TODO](#todo)
 
 # Getting started
@@ -108,7 +143,7 @@ This model stores information about label id, name and [iconUrls](#badgeurls-mod
 | Field | Type | Description |
 | :---- | :--: | :---------- |
 | id | `str` | Field unique id |
-| name | `str` | _lowercase_. Field unique name |
+| name | `str` | _case insensitive_. Field unique name |
 | iconUrls | [`BadgeURLs`](#badgeurls-model) \| `None` | _optional_. Field icons, some labels dont have icons. `None` if label does not have icons |
 
 ```mermaid
@@ -124,7 +159,7 @@ This model stores information about league id, its name and [iconUrls](#badgeurl
 | Field | Type | Description |
 | :---- | :--: | :---------- |
 | id | `str` | Field unique id |
-| name | `str` | _lowercase_. Field unique name |
+| name | `str` | _case insensitive_. Field unique name |
 | iconUrls | [`BadgeURLs`](#badgeurls-model) \| `None` | _optional_. Field icons, some leagues dont have icons. `None` if league does not have icons |
 
 ```mermaid
@@ -140,7 +175,7 @@ This model stores information about location id, its name and country code. Loca
 | Field | Type | Description |
 | :---- | :--: | :---------- |
 | id | `int` | Location unique id |
-| name | `str` | _lowercase_. Location unique name |
+| name | `str` | _case insensitive_. Location unique name |
 | isCountry | `bool` | `True` if location is country |
 | countryCode | `str` \| `None` | _optional_. Location country code. `None` if location is not country |
 
@@ -337,8 +372,8 @@ Clan chat language stores information about primary clan chat language.
 | Field | Type | Description |
 | :---- | :--: | :---------- |
 | id | `int` | Language unique id |
-| name | `str` | _lowercase_. Language unique name |
-| languageCode | `str` | _lowercase_. Language code (like country code) |
+| name | `str` | _case insensitive_. Language unique name |
+| languageCode | `str` | _case insensitive_. Language code (like country code) |
 
 <h3 id="goldpass-model">GoldPass</h3>
 
@@ -349,11 +384,380 @@ This model describes information about current gold pass.
 | startTime | [`datetime.datetime`](https://docs.python.org/3/library/datetime.html#datetime-objects) | Current season start time (UTC)<br/>_pendulum may be good here_ |
 | endTime | [`datetime.datetime`](https://docs.python.org/3/library/datetime.html#datetime-objects) | Current season end time (UTC)<br/>_pendulum may be good here_ |
 
+## Methods
+
+<h3 id="method-clans">clans</h3>
+
+**At least one filtering criteria must be used**  
+Use this method to query all clans by name and/or filtering the results using various criteria. If name is used as part of search, it is required to be at least three characters long. It is not possible to specify ordering for results so clients should not rely on any specific ordering as that may change in the future releases of the [API](https://developer.clashofclans.com/#/documentation).
+
+Normally, method makes 1 request , but there are some exclusions:  
+- If `location` parameter is not `None`, method can make 1 additional request to [API](https://developer.clashofclans.com/#/documentation) in order to convert location name to its id. For details see [_get_location_id](#method-get-location-id).  
+- If `labels` parameter is not `None`, method can make 1 additional request to [API](https://developer.clashofclans.com/#/documentation) in order to convert label/labels name to its id/ids. For details see [_get_clan_label_id](#method-get-clan-label-id).
+
+_So the maximum number of request this method can make is 3_
+
+Returns list of clan tags.
+
+| Parameter | Type | Description |
+| :-------- | :--: | :---------- |
+| name | `str` | _optional_. Clan name. Must be at least 3 characters long |
+| min_members | `int` | _optional_. Minimum clan members |
+| max_members | `int` | _optional_. Maximum clan members |
+| min_clan_points | `int` | _optional_. Minimum clan points |
+| min_clan_level | `int` | _optional_. Minimum clan level |
+| war_frequency | `always` \| `moreThanOncePerWeek` \| `oncePerWeek` \| `lessThanOncePerWeek` \| `never` \| `'unknown'` | _optional_. Clan war frequency |
+| location | `str` | _optional_. Clan location. May be either country code or full location name (_e.g. Russia == RU_) |
+| labels | `str` \| `list[str]` | _optional_. Clan label or labels |
+
+Examples:
+
+```py
+>>> clans = await client.clans(location='ru', war_frequency='never')
+['#RLU20URV', '#RV9RCQV', '#2LVV8RCJJ', ...] # results may differ
+```
+
+<h3 id="method-clans">clan</h3>
+
+Get information about a single clan by clan tag.
+
+Normally, method makes 1 request, but there are some exclusions:  
+- If clan war log is public, this method makes 2 additional requests to gather information about clan war state and clan war log.
+
+Returns [Clan](#clan-model) model.
+
+| Parameter | Type | Description |
+| :-------- | :--: | :---------- |
+| tag | `str` | _required_. Clan tag. Tag can be in any form (_e.g. "AAAAAA" == "#AAAAAA" == "%23AAAAAA" == "aaaaaa"_) |
+
+Examples:
+
+```py
+>>> clan1 = await client.clan('#2P8QU22L2')
+>>> print(clan.name, clan.location)
+# bomb Location(id=32000193, isCountry=true, name='russia', countryCode='ru')
+>>> clan2 = await client.clan('2P8QU22L2')
+>>> clan3 = await client.clan('%232P8QU22L2')
+>>> assert clan1 == clan2 == clan3
+```
+
+<h3 id="method-player">player</h3>
+
+Get information about a single player by player tag.
+
+This method makes only 1 request.
+
+Returns [Player](#player-model) model.
+
+| Parameter | Type | Description |
+| :-------- | :--: | :---------- |
+| tag | `str` | _required_. _case insensitive_. Player tag. Tag can be in any form (_e.g. "AAAAAA" == "#AAAAAA" == "%23AAAAAA" == "aaaaaa"_) |
+
+Examples:
+
+```py
+>>> player1 = await client.player('#LJJOUY2U8')
+>>> print(player1.name) # results may differ
+# bone_appettit
+```
+
+<h3 id="method-clan-rankings">clan_rankings</h3>
+
+Get clan rankings for a specific location.
+
+Normally, this method makes 1 request, but there is some exclusion:
+- See [_get_location_id](#method-get-location-id).
+
+Returns list of clan tags.
+
+| Parameter | Type | Description |
+| :-------- | :--: | :---------- |
+| location | `str` | _required_. _case insentive_. Location name or country code |
+
+Examples:
+
+```py
+>>> clans_in_russia = await client.clan_rankings('ru')
+print(clans_in_russia[0]) # results may differ
+# ...
+```
+
+<h3 id="method-player-rankings">player_rankings</h3>
+
+Get player rankings for a specific location.
+
+Normally, this method makes 1 request, but there is some exclusion:
+- See [_get_location_id](#method-get-location-id).
+
+Returns list of player tags.
+
+| Parameter | Type | Description |
+| :-------- | :--: | :---------- |
+| location | `str` | _required_. _case insentive_. Location name or country code |
+
+Examples:
+
+```py
+>>> players_in_russia = await client.player_rankings('ru')
+print(players_in_russia[0]) # results may differ
+# ...
+```
+
+<h3 id="method-clan-versus-rankings">clan_versus_rankings</h3>
+
+Get clan versus rankings for a specific location.
+
+Normally, this method makes 1 request, but there is some exclusion:
+- See [_get_location_id](#method-get-location-id).
+
+Returns list of clan tags.
+
+| Parameter | Type | Description |
+| :-------- | :--: | :---------- |
+| location | `str` | _required_. _case insentive_. Location name or country code |
+
+Examples:
+
+```py
+>>> clans_in_russia = await client.clan_versus_rankings('ru')
+print(clans_in_russia[0]) # results may differ
+# ...
+```
+
+<h3 id="method-player-versus-rankings">player_versus_rankings</h3>
+
+Get player versus rankings for a specific location.
+
+Normally, this method makes 1 request, but there is some exclusion:
+- See [_get_location_id](#method-get-location-id).
+
+Returns list of player tags.
+
+| Parameter | Type | Description |
+| :-------- | :--: | :---------- |
+| location | `str` | _required_. _case insensitive_. Location name or country code |
+
+Examples:
+
+```py
+>>> players_in_russia = await client.player_versus_rankings('ru')
+print(players_in_russia[0]) # results may differ
+# ...
+```
+
+<h3 id="method-goldpass">goldpass</h3>
+
+Get information about the current gold pass season
+
+This method always makes only 1 request.
+
+Returns [GoldPass](#goldpass-model) model.
+
+Examples:
+
+```py
+>>> goldpass = await client.goldpass()
+>>> print(goldpass.startTime) # result may differ
+# ...
+```
+
+## Exceptions
+
+<h3 id="exception-unknown-location-error">UnknownLocationError</h3>
+
+[Raises](https://github.com/bim-ba/coc-api/blob/6e247bfa6a8ff3938712bc3c814785c0eda867c0/src/client.py#L231) when you trying to pass unknown location to function parameters.
+
+| Field | Type | Description |
+| :---- | :--: | :---------- |
+| location | `Any` | What did you pass |
+| message | <details><summary>`str`</summary>````'Unknown location! To get available locations, check `self._locations` or official API reference https://developer.clashofclans.com/#/documentation for "locations/locations" block'````</details> | _constant_. Detailed message on whats going on |
+
+<h3 id="exception-unknown-clan-label-error">UnknownClanLabelError</h4>
+
+[Raises](https://github.com/bim-ba/coc-api/blob/6e247bfa6a8ff3938712bc3c814785c0eda867c0/src/client.py#L279) when you trying to pass unknown clan label to function parameters.
+
+| Field | Type | Description |
+| :---- | :--: | :---------- |
+| label | `Any` | What did you pass |
+| message | <details><summary>`str`</summary>````'Unknown clan label! To get available clan labels, check `self._locations` or official API reference https://developer.clashofclans.com/#/documentation for "locations/locations" block'````</details> | _constant_. Detailed message on whats going on |
+
+## Aliases
+
+<h3 id="alias-case-sensitive-str">CaseSensitiveStr</h3>
+
+Describes case sensitive string.  
+Equivalent to `str`.
+
+```py
+CaseSensitiveStr = str
+```
+
+<h3 id="alias-case-insensitive-str">CaseInsensitiveStr</h3>
+
+Describes case insensitive string.  
+Equivalent to `str`.
+
+```py
+CaseInsensitiveStr = str
+```
+
+<h3 id="alias-positive-int">PositiveInt</h3>
+
+Describes positive int.  
+Equivalent to `int`.
+
+```py
+PositiveInt = int
+```
+
+<h3 id="alias-url">Url</h3>
+
+Describes full url (_e.g. `https://example.com/`_).  
+Equivalent to `str`.
+
+```py
+Url = str
+```
+
+<h3 id="alias-relative-url">RelativeUrl</h3>
+
+Describes relative url (_e.g. `/api/v1`_)  
+Equivalent to `str`.
+
+```py
+RelativeUrl = Url
+```
+
+<h3 id="alias-tag">Tag</h3>
+
+Describes clan tag or player tag.  
+Starts with _#_, may have only digits and capital letters, length in range 1 to 9 (except _#_ symbol) _<-- unverified_  
+Equivalent to `str`.
+
+Must match `r'#[1-9A-Z]{1,9}'` regex, but in fact there is no check.
+
+```py
+Tag = str
+```
+
+<h3 id="alias-clan-type">ClanType</h3>
+
+_constant_. Describes clan type.  
+
+```py
+ClanType = 'open' | 'closed' | 'inviteOnly'
+```
+
+<h3 id="alias-clan-role">ClanRole</h3>
+
+_constant_. Describes player clan role.  
+
+```py
+ClanRole = 'leader' | 'coLeader' | 'admin' | 'member'
+```
+
+<h3 id="alias-clan-war-frequency">ClanWarFrequency</h3>
+
+_constant_. Describes clan war frequency.
+
+```py
+ClanWarFrequency = 'always' | 'moreThanOncePerWeek' | 'oncePerWeek' | 'lessThanOncePerWeek' | 'never' | 'unknown'
+```
+
+<h3 id="alias-clan-war-preference">ClanWarPreference</h3>
+
+_constant_. Describes clan war preference.
+
+```py
+ClanWarPreference = 'in' | 'out'
+```
+
+<h3 id="alias-clan-war-result-l">ClanWarResultL</h3>
+
+_constant_. Describes clan war result.
+
+```py
+ClanWarResultL = 'win' | 'lost' | 'tie'
+```
+
+<h3 id="alias-clan-war-state">ClanWarState</h3>
+
+_constant_. Describes current war state.
+
+```py
+ClanWarState = 'notInWar' | 'preparation' | 'inWar'
+```
+
+<h3 id="alias-village">Village</h3>
+
+_constant_. Describes game village.
+
+```py
+Village = 'home' | 'builderBase'
+```
+
+<h3 id="alias-location-name">LocationName</h3>
+
+_[case insensitive](#alias-case-insensitive-str)_. Describes full location name. (_e.g. russia | united states_).  
+Equivalent to `str`.
+
+```py
+LocationName = CaseInsensitiveStr
+```
+
+<h3 id="alias-country-code">CountryCode</h3>
+
+_[case insensitive](#alias-case-insensitive-str)_. Describes location country code. (_e.g. ru | us_).  
+Equivalent to `str`.
+
+```py
+CountryCode = CaseInsensitivestr
+```
+
+<h3 id="alias-label-id">LabelID</h3>
+
+_[positive int](#alias-positive-int)_. Describes player or clan label id.  
+Equivalent to `str`.
+
+```py
+LabelID = PositiveInt
+```
+
+<h3 id="alias-label-name">LabelName</h3>
+
+_[case insensitive](#alias-case-insensitive-str)_. Describes player or clan label name.  
+Equivalent to `str`.
+
+```py
+LabelName = CaseInsensitiveStr
+```
+
+<h3 id="alias-league-id">LeagueID</h3>
+
+_[positive int](#alias-positive-int)_. Describes player or clan war league id.  
+Equivalent to `str`.
+
+```py
+LeagueID = PositiveInt
+```
+
+<h3 id="alias-label-name">LeagueName</h3>
+
+_[case insensitive](#alias-case-insensitive-str)_. Describes player or clan war league name.  
+Equivalent to `str`.
+
+```py
+LeagueName = CaseInsensitiveStr
+```
+
 # TODO
 
 - [ ] `tests.py`
-- [ ] Testing under _Python <=3.9_
-- [ ] Models fields must corresponds to _snake_case_ syntax
+    - [ ] Testing under _Python <=3.9_
+- [ ] Model fields must correspond to _snake_case_ syntax
 - [ ] Pendulum instead of standard datetime (is it worth it?)
 - [ ] Comparable [Location](#location-model) and [ClanChatLanguage](#clan-chat-language-model)
-- [ ] Comparable [Player](#player-model) and [ClanWarPlayer](#clan-war-player-model) 
+- [ ] Comparable [Player](#player-model) and [ClanWarPlayer](#clan-war-player-model)
+- [ ] Comparable [Clans](#clan-model)
+- [ ] Comparable [Player](#player-model)
+- [ ] `asyncio.gather` for `clans` method
