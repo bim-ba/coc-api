@@ -210,9 +210,9 @@ This model describes all information about player.
 | versusBattleWins | `int` | Player summary versus battle wins |
 | donations | `int` | Player summary donations |
 | donationsReceived | `int` | Player summary donations received |
-| troops | <code>list[[`PlayerTroop`](#player-troop-model)]</code> | Player troops leveling |
-| heroes | <code>list[[`PlayerTroop`](#player-troop-model)]</code> | Player heroes leveling |
-| spells | <code>list[[`PlayerTroop`](#player-troop-model)]</code> | Player spells leveling |
+| troops | <code>list[[PlayerTroop](#player-troop-model)]</code> | Player troops leveling |
+| heroes | <code>list[[PlayerTroop](#player-troop-model)]</code> | Player heroes leveling |
+| spells | <code>list[[PlayerTroop](#player-troop-model)]</code> | Player spells leveling |
 | league | [`PlayerLeague`](#player-league-model) \| `None` | _optional_. Player league. `None` if player does not have league |
 | clan | `str` | _optional_. Clan tag. It is not [Clan](#clan-model) due to recursion and object weight. `None` if player does not have clan |
 | role | `'leader'` \| `'coLeader'` \| `'admin'` \| `'member'` \| `None` | _optional_. Player role in clan. `None` if player does not have clan |
@@ -264,11 +264,11 @@ This model describes all information about clan.
 | name | `str` | Clan name |
 | type | `'open'` \| `'closed'` \| `'inviteOnly'` | Clan type |
 | description | `str` | Clan description |
-| badgeUrls | [`BadgeURLs`] | Clan icon urls |
+| badgeUrls | [`BadgeURLs`](#badgeurls-model) | Clan icon urls |
 | requiredTrophies | `int` | Required trophies to join this clan |
 | requiredVersusTrophies | `int` | Required versus trophies (builder base) to join this clan |
 | requiredTownhallLevel | `int` | Required town hall level to join this clan |
-| labels | <code>list[[`ClanLabel`](#clan-label-model)]</code> | List of clan labels |
+| labels | <code>list[[ClanLabel](#clan-label-model)]</code> | List of clan labels |
 | clanLevel | `int` | Clan level |
 | clanPoints | `int` | Clan points |
 | clanVersusPoints | `int` | Clan versus points |
@@ -337,7 +337,7 @@ This model describes information about player in current clan war and his attack
 | tag | `str` | Player tag |
 | mapPosition | `int` | Player map position |
 | opponentAttacks | `int` | It seems to be `len(self.attacks)` |
-| attacks | <code>list[[`ClanWarAttack`](#clan-war-attack-model)]</code> \| `None` | _optional_. Attacks against opponents. `None` if no were made |
+| attacks | <code>list[[ClanWarAttack](#clan-war-attack-model)]</code> \| `None` | _optional_. Attacks against opponents. `None` if no were made |
 | bestOpponentAttack | [`ClanWarAttack`](#clan-war-attack-model) \| `None` | _optional_. Best attack in `self.attacks`, based on stars and destruction percentage. `None` if no were made |
 
 <h3 id="clan-war-result-model">ClanWarResult</h3>
