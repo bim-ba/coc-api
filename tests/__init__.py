@@ -1,0 +1,20 @@
+import asyncio
+
+import pytest_asyncio
+
+import cocapi
+
+TOKEN = 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzUxMiIsImtpZCI6IjI4YTMxOGY3LTAwMDAtYTFlYi03ZmExLTJjNzQzM2M2Y2NhNSJ9.eyJpc3MiOiJzdXBlcmNlbGwiLCJhdWQiOiJzdXBlcmNlbGw6Z2FtZWFwaSIsImp0aSI6IjcwMmM3YTQ3LTVjN2ItNDExYy04OTc2LWZiNjU3YTBkMDU1ZCIsImlhdCI6MTY0NTM3MTA0MSwic3ViIjoiZGV2ZWxvcGVyLzExY2MwYjA5LTFmNWEtNmMyNi0xNGY1LTRmNzA3OGRmN2YwNiIsInNjb3BlcyI6WyJjbGFzaCJdLCJsaW1pdHMiOlt7InRpZXIiOiJkZXZlbG9wZXIvc2lsdmVyIiwidHlwZSI6InRocm90dGxpbmcifSx7ImNpZHJzIjpbIjEwOS4yNTIuMTE4LjIxNiJdLCJ0eXBlIjoiY2xpZW50In1dfQ.tI12LhdoMCj8jtbYRf0nmQwSD6Hf_FY4Kxxc-99bx8gV5bKNi72MnASliH4SWc6j_O3VD8Z-Fut2BREezJr_Pw'
+
+asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+
+@pytest_asyncio.fixture
+async def default_client():
+    client = cocapi.client.Client(TOKEN)
+    yield cocapi.client.Client(TOKEN)
+    await client._session.close()
+
+@pytest_asyncio.fixture(autouse=True)
+async def slow_down_requests():
+    yield
+    await asyncio.sleep(1)
