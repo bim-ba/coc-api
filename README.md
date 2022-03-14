@@ -752,7 +752,8 @@ LeagueName = CaseInsensitiveStr
 
 # TODO
 
-- [ ] `tests.py`
+- [ ] Its own event loop for `Client`
+- [x] `tests.py`
     - [ ] Testing under _Python <=3.9_
 - [ ] Model fields must correspond to _snake_case_ syntax
 - [ ] Pendulum instead of standard datetime (is it worth it?)
