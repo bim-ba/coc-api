@@ -94,6 +94,8 @@ This API is tested under _Python >=3.9_.
 | attrs | >=21.4.0 |
 | cattrs | >=1.10.0 |
 | aiohttp | >=3.8.1 |
+| pytest | _dev_. >=7.1.0 |
+| pytest-asyncio | _dev_. >=0.18.2 |
 
 ## Installation
 
@@ -104,6 +106,12 @@ if code will be good, I think now it is only a raw version.
 $ git clone https://github.com/bim-ba/coc-api.git
 $ cd coc-api
 $ pipenv install
+```
+
+If you want to contribute, you need to install some dev packages.
+
+```shell
+$ pipenv install --dev
 ```
 
 # Usage
@@ -755,6 +763,7 @@ LeagueName = CaseInsensitiveStr
 - [ ] Its own event loop for `Client`
 - [x] `tests.py`
     - [ ] Testing under _Python <=3.9_
+    - [ ] Test documentation (_primary/extended tests_)
 - [ ] Model fields must correspond to _snake_case_ syntax
 - [ ] Pendulum instead of standard datetime (is it worth it?)
 - [ ] Comparable [Location](#location-model) and [ClanChatLanguage](#clan-chat-language-model)
