@@ -1,12 +1,7 @@
-import asyncio
+from . import default_client
 
-import pytest
 
-from cocapi.client import Client
-from . import default_client, slow_down_requests
-
-@pytest.mark.asyncio
-async def test_goldpass_primary(default_client: Client, slow_down_requests):
-    goldpass = await default_client.goldpass()
-    assert goldpass.startTime.year > 2000
-    assert goldpass.startTime.year > 2000
+def test_goldpass_primary(default_client):
+    goldpass = default_client.goldpass()
+    assert goldpass.start_time.year > 2000
+    assert goldpass.start_time.year > 2000

@@ -1,20 +1,19 @@
 import asyncio
 
-import pytest
+from . import default_client
 
-from cocapi.client import Client
-from . import default_client, slow_down_requests
 
-@pytest.mark.asyncio
-async def test_player_versus_rankings_primary(default_client: Client, slow_down_requests):
-    players = await default_client.player_versus_rankings('russia')
+def test_player_versus_rankings_primary(default_client):
+    players = default_client.player_versus_rankings("russia")
     assert len(players) > 0
 
-@pytest.mark.asyncio
-async def test_player_versus_rankings_location_variety_primary(default_client: Client, slow_down_requests):
-    players1, players2 = await asyncio.gather(
-        default_client.player_versus_rankings('ruSSia'),
-        default_client.player_versus_rankings('ru')
+
+def test_player_versus_rankings_location_variety_primary(default_client):
+    players1, players2 = default_client._event_loop.run_until_complete(
+        asyncio.gather(
+            default_client._player_versus_rankings("ruSSia"),
+            default_client._player_versus_rankings("ru"),
+        )
     )
     assert len(players1) > 0
     assert len(players2) > 0

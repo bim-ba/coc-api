@@ -1,13 +1,21 @@
-# pyright: strict
-
 from datetime import datetime
+
 from .aliases import Tag
 
-def rawtime_to_datetime(raw_data: str):
-    fmt = '%Y%m%dT%H%M%S.%fZ'
-    time = datetime.strptime(raw_data, fmt)
-    return time
+
+def rawtime_to_datetime(date_string: str):
+    fmt = "%Y%m%dT%H%M%S.%fZ"
+    try:
+        time = datetime.strptime(date_string, fmt)
+        return time
+    except ValueError:
+        return date_string
+
 
 def shape_tag(tag: Tag):
     true_tag = tag.upper()
-    return true_tag.replace('#', '%23')
+
+    if not true_tag.startswith("#"):
+        true_tag = f"#{true_tag}"
+
+    return true_tag.replace("#", "%23")

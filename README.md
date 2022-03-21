@@ -1,26 +1,70 @@
 <p align="center">
     <a href="" alt="Python">
-        <img src="https://img.shields.io/github/pipenv/locked/python-version/bim-ba/coc-api"/>
+        <img src="https://img.shields.io/badge/python-3.6 | 3.7 | 3.8 | 3.9 | 3.10-blue"/>
+    </a>
+    <a>
+        <img src="https://img.shields.io/static/v1?label=code style&message=black&color=black"/>
     </a>
     <br/>
-    <a href="" alt="Status">
-        <img src="https://img.shields.io/badge/status-needs review-important"/>
-    </a>
     <a href="" alt="Contributions">
         <img src="https://img.shields.io/badge/contributions-welcome-brightgreen">
     </a>
 </p>
 
 <h1 align="center">coc-api</h1>
-<p align="center"><a href="https://developer.clashofclans.com/#/documentation">Clash of Clans API</a> implemented via Python.
+<p align="center">Wrapper around <a href="https://developer.clashofclans.com/#/documentation">Clash of Clans API</a> implemented in Python.
+
+# Getting started
+
+## Basic usage
+
+```python
+from cocapi import Client
+
+client = Client('TOKEN') # your token
+
+clans = client.clans(name='bomb', location='ru', max_members=30)
+print(clans)
+# ['#2P8QU22L2', '#2PPYL9928', '#2PPYL9928', ...]
+
+clan = client.clan(clans[0])
+print(clan.name, clan.location)
+# bomb Location(id=32000193, isCountry=true, name='russia', countryCode='ru')
+```
+
+## Installation
+
+For now, you can install it only from source. This package will be available on PyPi
+as soon as code will be good and there will be no errors, I think now it is only a raw version. For the main branch I am using a [poetry](https://python-poetry.org/) to manage the packages, but you can use whatever you want (there are `requirements.txt` and `dev-requirements.txt` for backward comatibility).
+
+```shell
+$ git clone https://github.com/bim-ba/coc-api.git
+$ cd coc-api
+$ poetry install --no-dev
+```
+
+If you want to contribute, you need to install some dev packages.
+
+```shell
+$ poetry install
+```
+
+## Requirements
+
+| Requirement | Version |
+| :---------- | :------ |
+| aiohttp | ^3.8.1 |
+| dacite | ^1.6.0 |
+| pyhumps | ^3.5.3 |
+| pytest | _dev_. ^7.1.1 |
+| black | _dev_. ^22.1.0 |
 
 # Contents
 
 * [Getting started](#getting-started)
-    * [Requirements](#requirements)
-    * [Installation](#installation)
-* [Usage](#usage)
     * [Basic usage](#basic-usage)
+    * [Installation](#installation)
+    * [Requirements](#requirements)
 * [General API Documentation](#general-api-documentation)
     * [Methods](#methods)
         * [clans](#method-clans)
@@ -82,60 +126,6 @@
         * [LeagueID](#alias-league-id)
         * [LeagueName](#alias-league-name)
 * [TODO](#todo)
-
-# Getting started
-
-This API is tested under _Python >=3.9_.
-
-## Requirements
-
-| Requirement | Version |
-| :---------- | :------ |
-| attrs | >=21.4.0 |
-| cattrs | >=1.10.0 |
-| aiohttp | >=3.8.1 |
-| pytest | _dev_. >=7.1.0 |
-| pytest-asyncio | _dev_. >=0.18.2 |
-
-## Installation
-
-For now, you can install it only from source. This package will be available on PyPi
-if code will be good, I think now it is only a raw version.
-
-```shell
-$ git clone https://github.com/bim-ba/coc-api.git
-$ cd coc-api
-$ pipenv install
-```
-
-If you want to contribute, you need to install some dev packages.
-
-```shell
-$ pipenv install --dev
-```
-
-# Usage
-
-## Basic usage
-
-```python
-import asyncio
-from client import Client
-
-async def main():
-    coc = Client('token') # your token
-
-    clans = await coc.clans(name='bomb', location='ru', max_members=30)
-    print(clans)
-    # ['#2P8QU22L2', '#2PPYL9928', '#2PPYL9928', ...]
-
-    clan = await coc.clan(clans[0])
-    print(clan.name, clan.location)
-    # bomb Location(id=32000193, isCountry=true, name='russia', countryCode='ru')
-
-if __name__ == '__main__':
-    asyncio.run(main())
-```
 
 # General API documentation
 
@@ -760,11 +750,11 @@ LeagueName = CaseInsensitiveStr
 
 # TODO
 
-- [ ] Its own event loop for `Client`
+- [x] Its own event loop for `Client`
 - [x] `tests.py`
     - [ ] Testing under _Python <=3.9_
     - [ ] Test documentation (_primary/extended tests_)
-- [ ] Model fields must correspond to _snake_case_ syntax
+- [x] Model fields must correspond to _snake_case_ syntax
 - [ ] Pendulum instead of standard datetime (is it worth it?)
 - [ ] Comparable [Location](#location-model) and [ClanChatLanguage](#clan-chat-language-model)
 - [ ] Comparable [Player](#player-model) and [ClanWarPlayer](#clan-war-player-model)

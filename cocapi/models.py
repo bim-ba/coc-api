@@ -1,139 +1,162 @@
-# pyright: strict
+from typing import Any, List, Optional
+from datetime import datetime
+from dataclasses import dataclass
 
-from datetime import datetime, timedelta
-from typing import List, Optional
-from attrs import frozen, field, converters
 
-from . import utils
 from .aliases import (
-    CaseInsensitiveStr, Tag, Url, Village,
-    ClanRole, ClanType, ClanWarFrequency, ClanWarPreference, ClanWarResultL, ClanWarState
+    CaseInsensitiveStr,
+    Tag,
+    Url,
+    Village,
+    ClanRole,
+    ClanType,
+    ClanWarFrequency,
+    ClanWarPreference,
+    ClanWarResultL,
+    ClanWarState,
 )
 
-@frozen
-class BadgeURLs:
-    small: Optional[Url] = None
-    medium: Optional[Url] = None
-    large: Optional[Url] = None
 
-@frozen
+@dataclass(frozen=True, eq=False)
+class BadgeURLs:
+    small: Url
+    medium: Url
+    large: Optional[Url]
+
+
+@dataclass(frozen=True, eq=False)
 class Label:
     id: int
-    name: CaseInsensitiveStr = field(converter=str.lower)
-    iconUrls: BadgeURLs
+    name: CaseInsensitiveStr
+    icon_urls: BadgeURLs
 
-@frozen
+
+@dataclass(frozen=True, eq=False)
 class League:
     id: int
-    name: CaseInsensitiveStr = field(converter=str.lower)
-    iconUrls: Optional[BadgeURLs] = None
+    name: CaseInsensitiveStr
+    icon_urls: Optional[BadgeURLs]
 
-@frozen
+
+@dataclass(frozen=True, eq=False)
 class Location:
     id: int
-    isCountry: bool
-    name: CaseInsensitiveStr = field(converter=str.lower)
-    countryCode: Optional[CaseInsensitiveStr] = field(default=None, converter=converters.optional(str.lower))
+    is_country: bool
+    name: CaseInsensitiveStr
+    country_code: Optional[CaseInsensitiveStr]
 
-@frozen
+
+@dataclass(frozen=True, eq=False)
 class ClanLabel(Label):
     pass
 
-@frozen
+
+@dataclass(frozen=True, eq=False)
 class ClanWarLeague(League):
     pass
 
-@frozen
+
+@dataclass(frozen=True, eq=False)
 class ClanChatLanguage:
     id: int
-    name: CaseInsensitiveStr = field(converter=str.lower)
-    languageCode: CaseInsensitiveStr = field(converter=str.lower)
+    name: CaseInsensitiveStr
+    language_code: CaseInsensitiveStr
 
-@frozen
+
+@dataclass(frozen=True, eq=False)
 class ClanWarAttack:
-    attackerTag: Tag
-    defenderTag: Tag
     stars: int
-    destructionPercentage: float
     order: int
-    duration: timedelta
+    duration: int
+    attacker_tag: Tag
+    defender_tag: Tag
+    destruction_percentage: float
 
-@frozen
+
+@dataclass(frozen=True, eq=False)
 class ClanWarPlayer:
     tag: Tag
-    mapPosition: int
-    opponentAttacks: int
-    attacks: Optional[List[ClanWarAttack]] = None
-    bestOpponentAttack: Optional[ClanWarAttack] = None
+    map_position: int
+    opponent_attacks: int
+    attacks: Optional[List[ClanWarAttack]]
+    best_opponent_attack: Optional[ClanWarAttack]
 
-@frozen
+
+@dataclass(frozen=True, eq=False)
 class ClanWarInfoClan:
-    clanLevel: int
     stars: int
-    destructionPercentage: float
-    attacks: Optional[int] = None
-    members: Optional[List[ClanWarPlayer]] = None
+    clan_level: int
+    attacks: Optional[int]
+    destruction_percentage: float
+    members: Optional[List[ClanWarPlayer]]
 
-@frozen
+
+@dataclass(frozen=True, eq=False)
 class ClanWarInfo:
     clan: ClanWarInfoClan
     opponent: ClanWarInfoClan
-    startTime: Optional[datetime] = field(default=None, converter=converters.optional(utils.rawtime_to_datetime))
-    endTime: Optional[datetime] = field(default=None, converter=converters.optional(utils.rawtime_to_datetime))
-    preparationStartTime: Optional[datetime] = field(default=None, converter=converters.optional(utils.rawtime_to_datetime))
-    teamSize: Optional[int] = None
-    attacksPerMember: Optional[int] = None
+    team_size: Optional[int]
+    attacks_per_member: Optional[int]
+    start_time: Optional[datetime | str | Any]  # datetime
+    end_time: Optional[datetime | str | Any]  # datetime
+    preparation_start_time: Optional[datetime | str | Any]  # datetime
 
-@frozen
+
+@dataclass(frozen=True, eq=False)
 class ClanWarResult:
-    result: ClanWarResultL
-    endTime: datetime = field(converter=utils.rawtime_to_datetime)
-    teamSize: int
-    attacksPerMember: int
+    result: Optional[ClanWarResultL]
     clan: ClanWarInfoClan
     opponent: ClanWarInfoClan
+    team_size: int
+    attacks_per_member: int
+    end_time: datetime | str | Any  # datetime
 
-@frozen
+
+@dataclass(frozen=True, eq=False)
 class ClanWar:
     wins: int
     losses: int
     ties: int
     winstreak: int
-    isWarLogPublic: bool
+    is_war_log_public: bool
     league: ClanWarLeague
     frequency: ClanWarFrequency
-    state: Optional[ClanWarState] = None
-    currentwar: Optional[ClanWarInfo] = None
-    log: Optional[List[ClanWarResult]] = None
+    state: Optional[ClanWarState]
+    currentwar: Optional[ClanWarInfo]
+    log: Optional[List[ClanWarResult]]
 
-@frozen
+
+@dataclass(frozen=True, eq=False)
 class Clan:
     tag: str
     name: str
     type: ClanType
     description: str
-    badgeUrls: BadgeURLs
-    requiredTrophies: int
-    requiredVersusTrophies: int
-    requiredTownhallLevel: int
+    badge_urls: BadgeURLs
+    required_trophies: int
+    required_versus_trophies: int
+    required_townhall_level: int
     labels: List[ClanLabel]
-    clanLevel: int
-    clanPoints: int
-    clanVersusPoints: int
-    memberList: List[Tag]
+    clan_level: int
+    clan_points: int
+    clan_versus_points: int
+    member_list: List[Tag]
     war: ClanWar
-    location: Optional[Location] = None
-    chatLanguage: Optional[ClanChatLanguage] = None
+    location: Optional[Location]
+    chat_language: Optional[ClanChatLanguage]
 
-@frozen
+
+@dataclass(frozen=True, eq=False)
 class PlayerLeague(League):
     pass
 
-@frozen
+
+@dataclass(frozen=True, eq=False)
 class PlayerLabel(Label):
     pass
 
-@frozen
+
+@dataclass(frozen=True, eq=False)
 class PlayerAchievment:
     name: str
     stars: int
@@ -141,44 +164,47 @@ class PlayerAchievment:
     target: int
     info: str
     village: Village
-    completionInfo: Optional[str] = None
+    completion_info: Optional[str]
 
-@frozen
+
+@dataclass(frozen=True, eq=False)
 class PlayerTroop:
     name: str
     level: int
-    maxLevel: int
+    max_level: int
     village: Village
-    superTroopIsActive: Optional[bool] = None
+    super_troop_is_active: Optional[bool]
 
-@frozen
+
+@dataclass(frozen=True, eq=False)
 class Player:
     tag: str
     name: str
-    townHallLevel: int
-    builderHallLevel: int
-    expLevel: int
+    town_hall_level: int
+    builder_hall_level: int
+    exp_level: int
     trophies: int
-    bestTrophies: int
-    warStars: int
-    attackWins: int
-    defenseWins: int
-    versusTrophies: int
-    bestVersusTrophies: int
-    versusBattleWins: int
+    best_trophies: int
+    war_stars: int
+    attack_wins: int
+    defense_wins: int
+    versus_trophies: int
+    best_versus_trophies: int
+    versus_battle_wins: int
     donations: int
-    donationsReceived: int
+    donations_received: int
     troops: List[PlayerTroop]
     heroes: List[PlayerTroop]
     spells: List[PlayerTroop]
     achievements: List[PlayerAchievment]
-    league: Optional[PlayerLeague] = None
-    clan: Optional[Tag] = None
-    role: Optional[ClanRole] = None
-    warPreference: Optional[ClanWarPreference] = None
-    townHallWeaponLevel: Optional[int] = None
+    league: Optional[PlayerLeague]
+    clan: Optional[Tag]
+    role: Optional[ClanRole]
+    war_preference: Optional[ClanWarPreference]
+    town_hall_weapon_level: Optional[int]
 
-@frozen
+
+@dataclass(frozen=True, eq=False)
 class GoldPass:
-    startTime: datetime = field(converter=utils.rawtime_to_datetime)
-    endTime: datetime = field(converter=utils.rawtime_to_datetime)
+    start_time: datetime | str | Any  # datetime
+    end_time: datetime | str | Any  # datetime

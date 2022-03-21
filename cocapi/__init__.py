@@ -1,17 +1,23 @@
-from . import (
-    client,
-    aliases, exceptions, models, utils
-)
+from . import aliases
+from . import api
+from . import client
+from . import exceptions
+from . import models
+from . import utils
 
-__version__ = "1.0.0.dev1"
-
-__title__ = 'coc-api'
-__description__ = 'Asynchronous Client API for Clash of Clans'
+from .client import Client
 
 __all__ = [
-    'aliases',
-    'client',
-    'exceptions',
-    'models',
-    'utils'
+    "aliases",
+    "api",
+    "client",
+    "exceptions",
+    "models",
+    "utils",
+    "Client",
+    "__version__",
+    "__api_version__",
 ]
+
+__version__ = "1.0.0.dev1"
+__api_version__ = "1"
