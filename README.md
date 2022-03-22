@@ -750,6 +750,7 @@ LeagueName = CaseInsensitiveStr
 
 # TODO
 
+- [ ] `typing.Annotated` instead of raw aliases
 - [x] Its own event loop for `Client`
 - [x] `tests.py`
     - [ ] Testing under _Python <=3.9_
