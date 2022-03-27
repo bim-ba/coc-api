@@ -17,28 +17,28 @@ from .aliases import (
 )
 
 
-@dataclass(frozen=True, eq=False)
+@dataclass(frozen=True)
 class BadgeURLs:
     small: Url
     medium: Url
     large: Optional[Url]
 
 
-@dataclass(frozen=True, eq=False)
-class Label:
+@dataclass(frozen=True)
+class BaseLabel:
     id: int
     name: CaseInsensitiveStr
     icon_urls: BadgeURLs
 
 
-@dataclass(frozen=True, eq=False)
-class League:
+@dataclass(frozen=True)
+class BaseLeague:
     id: int
     name: CaseInsensitiveStr
     icon_urls: Optional[BadgeURLs]
 
 
-@dataclass(frozen=True, eq=False)
+@dataclass(frozen=True)
 class Location:
     id: int
     is_country: bool
@@ -46,24 +46,24 @@ class Location:
     country_code: Optional[CaseInsensitiveStr]
 
 
-@dataclass(frozen=True, eq=False)
-class ClanLabel(Label):
+@dataclass(frozen=True)
+class ClanLabel(BaseLabel):
     pass
 
 
-@dataclass(frozen=True, eq=False)
-class ClanWarLeague(League):
+@dataclass(frozen=True)
+class ClanWarLeague(BaseLeague):
     pass
 
 
-@dataclass(frozen=True, eq=False)
+@dataclass(frozen=True)
 class ClanChatLanguage:
     id: int
     name: CaseInsensitiveStr
     language_code: CaseInsensitiveStr
 
 
-@dataclass(frozen=True, eq=False)
+@dataclass(frozen=True)
 class ClanWarAttack:
     stars: int
     order: int
@@ -73,7 +73,7 @@ class ClanWarAttack:
     destruction_percentage: float
 
 
-@dataclass(frozen=True, eq=False)
+@dataclass(frozen=True)
 class ClanWarPlayer:
     tag: Tag
     map_position: int
@@ -82,7 +82,7 @@ class ClanWarPlayer:
     best_opponent_attack: Optional[ClanWarAttack]
 
 
-@dataclass(frozen=True, eq=False)
+@dataclass(frozen=True)
 class ClanWarInfoClan:
     stars: int
     clan_level: int
@@ -91,7 +91,7 @@ class ClanWarInfoClan:
     members: Optional[List[ClanWarPlayer]]
 
 
-@dataclass(frozen=True, eq=False)
+@dataclass(frozen=True)
 class ClanWarInfo:
     clan: ClanWarInfoClan
     opponent: ClanWarInfoClan
@@ -102,7 +102,7 @@ class ClanWarInfo:
     preparation_start_time: Optional[datetime | str | Any]  # datetime
 
 
-@dataclass(frozen=True, eq=False)
+@dataclass(frozen=True)
 class ClanWarResult:
     result: Optional[ClanWarResultL]
     clan: ClanWarInfoClan
@@ -112,7 +112,7 @@ class ClanWarResult:
     end_time: datetime | str | Any  # datetime
 
 
-@dataclass(frozen=True, eq=False)
+@dataclass(frozen=True)
 class ClanWar:
     wins: int
     losses: int
@@ -126,7 +126,7 @@ class ClanWar:
     log: Optional[List[ClanWarResult]]
 
 
-@dataclass(frozen=True, eq=False)
+@dataclass(frozen=True)
 class Clan:
     tag: str
     name: str
@@ -146,17 +146,17 @@ class Clan:
     chat_language: Optional[ClanChatLanguage]
 
 
-@dataclass(frozen=True, eq=False)
-class PlayerLeague(League):
+@dataclass(frozen=True)
+class PlayerLeague(BaseLeague):
     pass
 
 
-@dataclass(frozen=True, eq=False)
-class PlayerLabel(Label):
+@dataclass(frozen=True)
+class PlayerLabel(BaseLabel):
     pass
 
 
-@dataclass(frozen=True, eq=False)
+@dataclass(frozen=True)
 class PlayerAchievment:
     name: str
     stars: int
@@ -167,7 +167,7 @@ class PlayerAchievment:
     completion_info: Optional[str]
 
 
-@dataclass(frozen=True, eq=False)
+@dataclass(frozen=True)
 class PlayerTroop:
     name: str
     level: int
@@ -176,7 +176,7 @@ class PlayerTroop:
     super_troop_is_active: Optional[bool]
 
 
-@dataclass(frozen=True, eq=False)
+@dataclass(frozen=True)
 class Player:
     tag: str
     name: str
@@ -204,7 +204,7 @@ class Player:
     town_hall_weapon_level: Optional[int]
 
 
-@dataclass(frozen=True, eq=False)
+@dataclass(frozen=True)
 class GoldPass:
     start_time: datetime | str | Any  # datetime
     end_time: datetime | str | Any  # datetime

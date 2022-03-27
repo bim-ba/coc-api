@@ -1,11 +1,19 @@
-from typing import Literal
+from typing import Annotated, Literal, Text
 
-CaseSensitiveStr = str
-CaseInsensitiveStr = str
-PositiveInt = int
-Url = str
-RelativeUrl = Url
-Tag = CaseInsensitiveStr
+PositiveInt = Annotated[int, "positive integer"]
+NegativeInt = Annotated[int, "negative integer"]
+CaseSensitiveStr = Annotated[Text, "case sensitive string"]
+CaseInsensitiveStr = Annotated[Text, "case insensitive string"]
+
+Url = Annotated[Text, "url string"]
+RelativeUrl = Annotated[Url, "relative url string"]
+RequestMethod = Annotated[
+    Literal[
+        "GET", "HEAD", "POST", "PUT", "DELETE", "CONNECT", "OPTIONS", "TRACE", "PATCH"
+    ],
+    "request method",
+]
+Tag = Annotated[CaseInsensitiveStr, "clan or player tag"]
 """
 starts with #, only digits and capital letters, len = 1-9\n
 regex = r'#[1-9A-Z]{1,9}'

@@ -1,336 +1,200 @@
 import asyncio
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Dict, List, Optional, Text
 
 import aiohttp
-import humps.main as humps
-from dacite.core import from_dict
-from dacite.config import Config
+import dacite.core as dacite
+import dacite.config
+
 
 from . import api
 from . import utils
 from .aliases import (
-    CaseInsensitiveStr,
     ClanWarFrequency,
     CountryCode,
     LabelName,
     LocationName,
     PositiveInt,
-    RelativeUrl,
     Tag,
 )
 from .exceptions import UnknownLocationError, UnknownClanLabelError
-from .models import Clan, ClanLabel, GoldPass, Location, Player
+from .models import (
+    Clan,
+    ClanLabel,
+    ClanWarLeague,
+    GoldPass,
+    Location,
+    Player,
+    PlayerLabel,
+    PlayerLeague,
+)
+from .baseclient import BaseClient
 
 
-class Client:
+class Client(BaseClient):
     """
     Client class
     """
 
-    # _playerLabels: List[PlayerLabel] = field(init=False, default=None)
-    # _playerLeagues: List[PlayerLeague] = field(init=False, default=None)
-    # _clanLeagues: List[ClanWarLeague] = field(init=False, default=None)
-    _clan_labels: List[ClanLabel]
-    _locations: List[Location]
-
     _uri = "https://api.clashofclans.com"
-    _session: aiohttp.ClientSession
-    _event_loop: asyncio.AbstractEventLoop
 
-    def __init__(self, token: str):
+    _locations: Dict[Text, Location]
+    _clan_labels: Dict[Text, ClanLabel]
+    _clan_leagues: Dict[Text, ClanWarLeague]
+    _player_labels: Dict[Text, PlayerLabel]
+    _player_leagues: Dict[Text, PlayerLeague]
+
+    __token: Text
+    __session: aiohttp.ClientSession
+
+    # public properties
+    @property
+    def uri(self):
+        return self._uri
+
+    # private properties
+    @property
+    def _token(self):
+        return self.__token
+
+    @property
+    def _session(self):
+        return self.__session
+
+    def __init__(self, token: Text):
         logging.basicConfig(
-            level=logging.INFO, format="[%(created)f] [%(levelname)s] %(message)s"
+            level=logging.WARNING, format="[%(created)f] [%(levelname)s] %(message)s"
         )
 
-        self._clan_labels = None
-        self._locations = None
+        try:
+            _ = asyncio.get_running_loop()
+        except RuntimeError as error:
+            raise RuntimeError(
+                "Client class should be instantiated only within async method!"
+            ) from error
 
-        self._event_loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(self._event_loop)
-
-        self._event_loop.run_until_complete(self._init_http_session(token))
-
-    # def close(self):
-    # https://docs.aiohttp.org/en/stable/client_advanced.html#graceful-shutdown
-    # self._event_loop.run_until_complete(self._session.close())
-    # self._event_loop.run_until_complete(asyncio.sleep(0))
-
-    async def _init_http_session(self, token: str):
-        self._session = aiohttp.ClientSession(
+        self.__token = token
+        self.__session = aiohttp.ClientSession(
             base_url=self._uri,
             headers={
                 "accept": "application/json",
                 "authorization": f"Bearer {token}",
             },
-            connector=aiohttp.TCPConnector(loop=self._event_loop),
+            timeout=aiohttp.ClientTimeout(total=60),
         )
 
-    async def _validate_response(self, resp: aiohttp.ClientResponse):
-        """
-        Validate response for success.
-        Normally, this method only called in :meth:`self._fetch` after the actual request.
+    async def close(self):
+        # https://docs.aiohttp.org/en/stable/client_advanced.html#graceful-shutdown
+        await self.__session.close()
+        await asyncio.sleep(0)
 
-        Parameters
-        ----------
-        resp : aiohttp.ClientResponse
-            Actual response
-
-        According to the server API
-        ----------------------------
-        - ``200`` Succesfull response.
-        - ``400`` Client provided incorrect parameters for the request.
-        - ``403`` Access denied, either because of missing/incorrect credentials or used API token does not grant access to the requested resource.
-        - ``404`` Resource was not found.
-        - ``429`` Request was throttled, because amount of requests was above the threshold defined for the used API token.
-        - ``500`` Unknown error happened when handling the request.
-        - ``503`` Service is temprorarily unavailable because of maintenance.
-
-        Remarks
-        -------
-        Response codes, however, can be hardcoded and response code
-        just can be compared with hardcoded codes,
-        but for the sake of completeness, reason and detailed message
-        about response taken from the server response
-
-        See also
-        --------
-        :meth:`self._fetch`
-
-        Examples
-        --------
-        >>> await self._fetch('/v1/clans', params = { 'warFrequency': 1 })
-        Exception has occurred: ClientError
-        Invalid request! [400] badRequest ("Invalid value for warFrequency parameter.")
-        # [400] - response code
-        # [badRequest] - reason by server
-        # [("...")] - detailed message by server
-        """
-
-        if not resp.ok:
-            try:
-                json = await resp.json()
-
-                reason = json.get("reason")
-                message = json.get("message")
-
-                raise aiohttp.ClientError(
-                    f'Invalid request! [{resp.status}] {reason} ("{message}") [{resp.url}]'
-                )
-            except aiohttp.ContentTypeError as ex:
-                logging.error(
-                    "Error while decoding resp content to JSON. Server returned %d\n[%s]",
-                    resp.status,
-                    ex,
-                )
-
-    async def _fetch(
-        self, path: RelativeUrl, params: Optional[Dict[Any, Any]] = None
-    ) -> Dict[Any, Any]:
-        """
-        Fetch resource with base url https://api.clashofclans.com/
-
-        This function simply concatenate base url and ``path``.
-        Then it will make ``GET`` request with specified params (or without).
-
-        Parameters
-        ----------
-        path : str
-            Relative path.
-        params : dict, default None
-            Params to pass with request.
-
-        Returns
-        -------
-        dict
-            JSON-representable dict.
-
-        Examples
-        --------
-        >>> await self._fetch('/v1/clans/%232PQC8YLR9') # tag is #2PQC8YLR9
-        {'tag': '#2PQC8YLR9', 'name': 'Bomb', 'type': 'closed', ...}
-        >>> await self._fetch('/v1/locations')
-        {'items': [{...}, {...}, {...}], ...}
-        >>> await self._fetch('/v1/clans', params = { 'name': 'bomb' })
-        {'items': [{...}, {...}, {...}], ...}
-        """
-        filtered_params = params
-        if params is not None:
-            filtered_params = {
-                key: value for key, value in params.items() if value is not None
-            }
-
-        logging.info("Requesting %s", path)
-        async with self._session.get(path, params=filtered_params) as resp:
-            logging.info("Requested %s [%d]", resp.url, resp.status)
-            await self._validate_response(resp)
-            return await resp.json()
-
-    async def _init_location_list(self):
+    async def _init_locations(self):
         """
         Init ``self._locations`` by fetching data from the server.
-        Will fetch only if ``self._locations`` is ``None``.
         """
 
-        if self._locations is not None:
-            return
+        location_mapping = {}
+        location_data = await api.make_request(self.__session, api.Methods.LOCATIONS())
 
-        location_list: List[Location] = []
-        location_raw_data = await self._fetch(api.Methods.LOCATIONS())
-        location_cooked_data = humps.decamelize(location_raw_data)
-
-        for data in location_cooked_data["items"]:
-            location = from_dict(
+        for data in location_data["items"]:
+            location = dacite.from_dict(
                 data_class=Location,
                 data=data,
-                config=Config(type_hooks={str: str.lower}),
+                config=dacite.config.Config(type_hooks={str: str.lower}),
             )
-            location_list.append(location)
 
-        self._locations = location_list
+            if location.name:
+                location_mapping[location.name] = location
+            if location.country_code:
+                location_mapping[location.country_code] = location
 
-    async def _init_clan_labels_list(self):
+        self._locations = location_mapping
+
+    async def _init_clan_labels(self):
         """
         Init ``self._clan_labels`` by fetching data from the server.
-        Will fetch only if ``self._clan_labels`` is ``None``.
         """
 
-        if self._clan_labels is not None:
-            return
+        clan_labels_mapping = {}
+        clan_label_data = await api.make_request(
+            self.__session, api.Methods.CLAN_LABELS()
+        )
 
-        clan_labels_list: List[ClanLabel] = []
-        clan_label_raw_data = await self._fetch(api.Methods.CLAN_LABELS())
-        clan_label_cooked_data = humps.decamelize(clan_label_raw_data)
-
-        for data in clan_label_cooked_data["items"]:
-            clan_label = from_dict(
+        for data in clan_label_data["items"]:
+            clan_label = dacite.from_dict(
                 data_class=ClanLabel,
                 data=data,
-                config=Config(type_hooks={str: str.lower}),
+                config=dacite.config.Config(type_hooks={str: str.lower}),
             )
-            clan_labels_list.append(clan_label)
 
-        self._clan_labels = clan_labels_list
+            clan_labels_mapping[clan_label.name] = clan_label
 
-    async def _get_location_id(self, location: CaseInsensitiveStr):
+        self._clan_labels = clan_labels_mapping
+
+    async def _init_clan_leagues(self):
         """
-        Converts location as string to location id by searching through
-        available locations in ``self._locations``.
-
-        Parameters
-        ----------
-        location : str
-            [CaseInsentive]
-            Location full name or just country code.
-
-        Returns
-        -------
-        int
-            Location id.
-
-        Throws
-        ------
-        UnknownLocationError
-            If location name or location code is unknown.
-
-        Remarks
-        -------
-        - May fetch locations from server if not initialized. See :meth:``self._init_locations_list``
-
-        Examples
-        --------
-        >>> await self._get_location_id('KeNYa')
-        32000126
-        >>> await self._get_location_id('ru')
-        32000193
+        Init ``self._clan_leagues`` by fetching data from the server.
         """
 
-        if self._locations is None:
-            await self._init_location_list()
+        clan_leagues_mapping = {}
+        clan_leagues_data = await api.make_request(
+            self.__session, api.Methods.WARLEAGUES()
+        )
 
-        location = location.lower()
-
-        try:
-            location_id = next(
-                loc.id
-                for loc in self._locations
-                if location in (loc.country_code, loc.name)
+        for data in clan_leagues_data["items"]:
+            clan_league = dacite.from_dict(
+                data_class=ClanWarLeague,
+                data=data,
+                config=dacite.config.Config(type_hooks={str: str.lower}),
             )
-            return location_id
-        except StopIteration as stop_iteration:
-            raise UnknownLocationError(location) from stop_iteration
 
-    async def _get_clan_label_id(self, label: CaseInsensitiveStr):
+            clan_leagues_mapping[clan_league.name] = clan_league
+
+        self._clan_leagues = clan_leagues_mapping
+
+    async def _init_player_labels(self):
         """
-        Converts clan label as string to clan label id by searching through
-        available clan labels in ``self._clan_labels``.
-
-        Parameters
-        ----------
-        label : str
-            [CaseInsentive]
-            Label name.
-
-        Returns
-        -------
-        int
-            Clan label id.
-
-        Throws
-        ------
-        UnknownClanLabelError
-            If clan label is unknown.
-
-        Remarks
-        -------
-        - May fetch clan labels from server if not initialized. See :meth:``self._init_clan_labels_list``
-
-        Examples
-        --------
-        >>> await self._get_clan_label_id('InternatiONAL')
-        56000007
-        >>> await self._get_clan_label_id('CLAN GAMES')
-        56000004
+        Init ``self._player_labels`` by fetching data from the server.
         """
 
-        if self._clan_labels is None:
-            await self._init_clan_labels_list()
+        player_labels_mapping = {}
+        player_labels_data = await api.make_request(
+            self.__session, api.Methods.WARLEAGUES()
+        )
 
-        label = label.lower()
+        for data in player_labels_data["items"]:
+            player_label = dacite.from_dict(
+                data_class=PlayerLabel,
+                data=data,
+                config=dacite.config.Config(type_hooks={str: str.lower}),
+            )
 
-        try:
-            label_id = next(lab.id for lab in self._clan_labels if label == lab.name)
-            return label_id
-        except StopIteration as stop_iteration:
-            raise UnknownClanLabelError(label) from stop_iteration
+            player_labels_mapping[player_label.name] = player_label
 
-    async def _clans(self, **kwargs: Any) -> List[Tag]:
-        params = humps.camelize(kwargs)
-        if params.get("location"):
-            del params["location"]
-        if params.get("labels"):
-            del params["labels"]
+        self._player_labels = player_labels_mapping
 
-        if kwargs.get("location"):
-            raw_location = kwargs["location"]
-            location_id = await self._get_location_id(raw_location)
-            params["locationId"] = location_id
+    async def _init_player_leagues(self):
+        """
+        Init ``self._player_leagues`` by fetching data from the server.
+        """
 
-        if kwargs.get("labels"):
-            raw_labels = kwargs["labels"]
-            if isinstance(raw_labels, str):
-                raw_labels = [raw_labels]
+        player_leagues_mapping = {}
+        player_leagues_data = await api.make_request(
+            self.__session, api.Methods.WARLEAGUES()
+        )
 
-            label_ids = [
-                await self._get_clan_label_id(raw_label) for raw_label in raw_labels
-            ]
-            comma_separated_label_ids = ",".join(map(str, label_ids))
-            params["labelIds"] = comma_separated_label_ids
+        for data in player_leagues_data["items"]:
+            player_league = dacite.from_dict(
+                data_class=PlayerLeague,
+                data=data,
+                config=dacite.config.Config(type_hooks={str: str.lower}),
+            )
 
-        data = await self._fetch(api.Methods.CLANS(), params=params)
-        return [clan["tag"] for clan in data["items"]]
+            player_leagues_mapping[player_league.name] = player_league
 
-    def clans(
+        self._player_leagues = player_leagues_mapping
+
+    async def clans(
         self,
         *,
         name: Optional[str] = None,
@@ -354,21 +218,19 @@ class Client:
         ----------
         name : str
             Clan name
-        min_members : int [PositiveInt]
+        min_members : int
             Min clan members
-        max_members : int [PositiveInt]
+        max_members : int
             Max clan members
-        min_clan_points : int [PositiveInt]
+        min_clan_points : int
             Min clan points
-        min_clan_level : int [PositiveInt]
+        min_clan_level : int
             Min clan level
-        war_frequency : str [ClanWarFrequency]
-            War frequency as literal, see `ClanWarFrequency`
+        war_frequency : str
+            War frequency as literal, see ``ClanWarFrequency``
         location : str
-            [CaseInsentiveStr]
             Location name or country code
         labels : list[str] | str
-            [CaseInsentive]
             List of clan labels or just 1 clan label
 
         Returns
@@ -377,60 +239,57 @@ class Client:
 
         Examples
         --------
-        >>> a = await coc.clans(location='ru', war_frequency='never')
+        >>> await client.clans(location='ru', war_frequency='never')
         ['#RLU20URV', '#RV9RCQV', '#2LVV8RCJJ', ...]
         """
-        return self._event_loop.run_until_complete(
-            self._clans(
-                name=name,
-                min_members=min_members,
-                max_members=max_members,
-                min_clan_points=min_clan_points,
-                min_clan_level=min_clan_level,
-                war_frequency=war_frequency,
-                location=location,
-                labels=labels,
-            )
+
+        params = {}
+
+        if name:
+            params["name"] = name
+
+        if min_members:
+            params["minMembers"] = min_members
+
+        if max_members:
+            params["maxMembers"] = max_members
+
+        if min_clan_points:
+            params["minClanPoints"] = min_clan_points
+
+        if min_clan_level:
+            params["minClanLevel"] = min_clan_level
+
+        if war_frequency:
+            params["warFrequency"] = war_frequency
+
+        if location:
+            loc = await self.get_location(location)
+            loc_id = loc.id
+            params["locationId"] = loc_id
+
+        if labels:
+            if isinstance(labels, str):
+                labels = [labels]
+
+            lab_ids = []
+
+            for lab in labels:
+                lab = lab.lower()
+                clan_lab = await self.get_clan_label(lab)
+                lab_ids.append(clan_lab.id)
+
+            # [1, 2, 3] => "1,2,3"
+            comma_separated_lab_ids = ",".join(map(str, lab_ids))
+            params["labelIds"] = comma_separated_lab_ids
+
+        clans_data = await api.make_request(
+            self.__session, api.Methods.CLANS(), params=params
         )
+        tag_list = [clan["tag"] for clan in clans_data["items"]]
+        return tag_list
 
-    async def _clan(self, tag: Tag) -> Clan:
-        shaped_tag = utils.shape_tag(tag)
-        clan_data = await self._fetch(api.Methods.CLAN(clantag=shaped_tag))
-
-        member_tags = [member["tag"] for member in clan_data["memberList"]]
-        clan_data["memberList"] = member_tags
-
-        clan_data["war"] = {}
-        clan_data["war"]["wins"] = clan_data.pop("warWins")
-        clan_data["war"]["losses"] = clan_data.pop("warLosses")
-        clan_data["war"]["ties"] = clan_data.pop("warTies")
-        clan_data["war"]["winstreak"] = clan_data.pop("warWinStreak")
-        clan_data["war"]["frequency"] = clan_data.pop("warFrequency")
-        clan_data["war"]["isWarLogPublic"] = clan_data.pop("isWarLogPublic")
-        clan_data["war"]["league"] = clan_data.pop("warLeague")
-
-        if clan_data["war"]["isWarLogPublic"]:
-            returned_war_data = await asyncio.gather(
-                self._fetch(api.Methods.CLAN_CURRENT_WAR(clantag=shaped_tag)),
-                self._fetch(api.Methods.CLAN_WARLOG(clantag=shaped_tag)),
-            )
-            war_data, war_log_data = returned_war_data
-            war_state = war_data["state"]
-
-            clan_data["war"]["state"] = war_state
-            clan_data["war"]["log"] = war_log_data["items"]
-
-            if war_state != "notInWar":
-                clan_data["war"]["currentwar"] = war_data
-
-        cooked_clan_data = humps.decamelize(clan_data)
-        return from_dict(
-            data_class=Clan,
-            data=cooked_clan_data,
-            config=Config(type_hooks={str: utils.rawtime_to_datetime}),
-        )
-
-    def clan(self, tag: Tag) -> Clan:
+    async def clan(self, tag: Tag) -> Clan:
         """
         Get information about a single clan by clan tag.
         Clan tags can be found using clan search operation.
@@ -454,18 +313,56 @@ class Client:
         If clan war log is public:
             - '/clans/{tag}/currentwar' (information about current war)
             - '/clans/{tag}/warlog' (log all war results)
+
+        Examples
+        --------
+        >>> await client.clan('#2P8QU22L2')
+        #TODO: examples
         """
-        return self._event_loop.run_until_complete(self._clan(tag))
 
-    async def _player(self, tag: Tag) -> Player:
         shaped_tag = utils.shape_tag(tag)
-        player_data = await self._fetch(api.Methods.PLAYER(playertag=shaped_tag))
-        player_data["clan"] = player_data["clan"]["tag"]
-        cooked_player_data = humps.decamelize(player_data)
+        clan_data = await api.make_request(
+            self.__session, api.Methods.CLAN(clantag=shaped_tag)
+        )
 
-        return from_dict(data_class=Player, data=cooked_player_data)
+        member_tags = [member["tag"] for member in clan_data["member_list"]]
+        clan_data["member_list"] = member_tags
 
-    def player(self, tag: Tag) -> Player:
+        clan_data["war"] = {}
+        clan_data["war"]["wins"] = clan_data.pop("war_wins")
+        clan_data["war"]["losses"] = clan_data.pop("war_losses")
+        clan_data["war"]["ties"] = clan_data.pop("war_ties")
+        clan_data["war"]["winstreak"] = clan_data.pop("war_win_streak")
+        clan_data["war"]["frequency"] = clan_data.pop("war_frequency")
+        clan_data["war"]["is_war_log_public"] = clan_data.pop("is_war_log_public")
+        clan_data["war"]["league"] = clan_data.pop("war_league")
+
+        if clan_data["war"]["is_war_log_public"]:
+            returned_war_data = await asyncio.gather(
+                api.make_request(
+                    self.__session, api.Methods.CLAN_CURRENT_WAR(clantag=shaped_tag)
+                ),
+                api.make_request(
+                    self.__session, api.Methods.CLAN_WARLOG(clantag=shaped_tag)
+                ),
+            )
+            war_data, war_log_data = returned_war_data
+            war_state = war_data["state"]
+
+            clan_data["war"]["state"] = war_state
+            clan_data["war"]["log"] = war_log_data["items"]
+
+            if war_state != "notInWar":
+                clan_data["war"]["currentwar"] = war_data
+
+        clan_object = dacite.from_dict(
+            data_class=Clan,
+            data=clan_data,
+            config=dacite.config.Config(type_hooks={str: utils.rawtime_to_datetime}),
+        )
+        return clan_object
+
+    async def player(self, tag: Tag) -> Player:
         """
         Get information about a single player by player tag.
         Player tags can be found either in game or by from clan member lists.
@@ -480,19 +377,23 @@ class Client:
         -------
         Player
             Player object.
+
+        Examples
+        --------
+        >>> await client.player('...')
+        #TODO: examples
         """
-        return self._event_loop.run_until_complete(self._player(tag))
 
-    async def _clan_rankings(self, location: LocationName | CountryCode) -> List[Tag]:
-        location_id = await self._get_location_id(location)
-        rankings_data = await self._fetch(
-            api.Methods.CLAN_RANKINGS(location_id=location_id)
+        shaped_tag = utils.shape_tag(tag)
+        player_data = await api.make_request(
+            self.__session, api.Methods.PLAYER(playertag=shaped_tag)
         )
+        player_data["clan"] = player_data["clan"]["tag"]
 
-        tag_list = [clan["tag"] for clan in rankings_data["items"]]
-        return tag_list
+        player_object = dacite.from_dict(data_class=Player, data=player_data)
+        return player_object
 
-    def clan_rankings(self, location: LocationName | CountryCode) -> List[Tag]:
+    async def clan_rankings(self, location: LocationName | CountryCode) -> List[Tag]:
         """
         Get clan rankings for a specific location
 
@@ -505,19 +406,23 @@ class Client:
         -------
         list[str]
             List of clan tags (descending by score)
-        """
-        return self._event_loop.run_until_complete(self._clan_rankings(location))
 
-    async def _player_rankings(self, location: LocationName | CountryCode) -> List[Tag]:
-        location_id = await self._get_location_id(location)
-        rankings_data = await self._fetch(
-            api.Methods.PLAYER_RANKINGS(location_id=location_id)
+        Examples
+        --------
+        >>> await client.aclan_rankings('russia')
+        >>> await client.aclan_rankings('ru')
+        #TODO: examples
+        """
+
+        loc = await self.get_location(location)
+        rankings_data = await api.make_request(
+            self.__session, api.Methods.CLAN_RANKINGS(location_id=loc.id)
         )
 
         tag_list = [clan["tag"] for clan in rankings_data["items"]]
         return tag_list
 
-    def player_rankings(self, location: LocationName | CountryCode) -> List[Tag]:
+    async def player_rankings(self, location: LocationName | CountryCode) -> List[Tag]:
         """
         Get player rankings for a specific location
 
@@ -530,10 +435,23 @@ class Client:
         -------
         list[str]
             List of player tags (descending by trophies)
-        """
-        return self._event_loop.run_until_complete(self._player_rankings(location))
 
-    async def _clan_versus_rankings(
+        Examples
+        --------
+        >>> await client.player_rankings('russia')
+        >>> await client.player_rankings('ru')
+        #TODO: examples
+        """
+
+        loc = await self.get_location(location)
+        rankings_data = await api.make_request(
+            self.__session, api.Methods.PLAYER_RANKINGS(location_id=loc.id)
+        )
+
+        tag_list = [clan["tag"] for clan in rankings_data["items"]]
+        return tag_list
+
+    async def clan_versus_rankings(
         self, location: LocationName | CountryCode
     ) -> List[Tag]:
         """
@@ -548,44 +466,25 @@ class Client:
         -------
         list[str]
             List of clan tags (descending by versus score)
+
+        Examples
+        --------
+        >>> await client.aclan_versus_rankings('russia')
+        >>> await client.aclan_versus_rankings('ru')
+        #TODO: examples
         """
 
-        location_id = await self._get_location_id(location)
-        rankings_data = await self._fetch(
-            api.Methods.CLAN_VERSUS_RANKINGS(location_id=location_id)
+        loc = await self.get_location(location)
+        rankings_data = await api.make_request(
+            self.__session, api.Methods.CLAN_VERSUS_RANKINGS(location_id=loc.id)
         )
 
         tag_list = [clan["tag"] for clan in rankings_data["items"]]
         return tag_list
 
-    def clan_versus_rankings(self, location: LocationName | CountryCode) -> List[Tag]:
-        """
-        Get clan versus rankings for a specific location
-
-        Parameters
-        ----------
-        location : str
-            Location name or its code
-
-        Returns
-        -------
-        list[str]
-            List of clan tags (descending by versus score)
-        """
-        return self._event_loop.run_until_complete(self._clan_versus_rankings(location))
-
-    async def _player_versus_rankings(
+    async def player_versus_rankings(
         self, location: LocationName | CountryCode
     ) -> List[Tag]:
-        location_id = await self._get_location_id(location)
-        rankings_data = await self._fetch(
-            api.Methods.PLAYER_VERSUS_RANKINGS(location_id=location_id)
-        )
-
-        tag_list = [clan["tag"] for clan in rankings_data["items"]]
-        return tag_list
-
-    def player_versus_rankings(self, location: LocationName | CountryCode) -> List[Tag]:
         """
         Get player versus rankings for a specific location
 
@@ -598,21 +497,23 @@ class Client:
         -------
         list[str]
             List of player tags (descending by versus trophies)
+
+        Examples
+        --------
+        >>> await client.aplayer_versus_rankings('russia')
+        >>> await client.aplayer_versus_rankings('ru')
+        #TODO: examples
         """
-        return self._event_loop.run_until_complete(
-            self._player_versus_rankings(location)
+
+        loc = await self.get_location(location)
+        rankings_data = await api.make_request(
+            self.__session, api.Methods.PLAYER_VERSUS_RANKINGS(location_id=loc.id)
         )
 
-    async def _goldpass(self) -> GoldPass:
-        goldpass_raw_data = await self._fetch(api.Methods.GOLDPASS())
-        goldpass_cooked_data = humps.decamelize(goldpass_raw_data)
-        return from_dict(
-            data_class=GoldPass,
-            data=goldpass_cooked_data,
-            config=Config(type_hooks={str: utils.rawtime_to_datetime}),
-        )
+        tag_list = [clan["tag"] for clan in rankings_data["items"]]
+        return tag_list
 
-    def goldpass(self) -> GoldPass:
+    async def goldpass(self) -> GoldPass:
         """
         Get information about the current gold pass season
 
@@ -620,5 +521,258 @@ class Client:
         -------
         GoldPass
             Gold pass object.
+
+        Examples
+        --------
+        >>> await client.goldpass()
+        #TODO: examples
         """
-        return self._event_loop.run_until_complete(self._goldpass())
+
+        goldpass_data = await api.make_request(self.__session, api.Methods.GOLDPASS())
+
+        goldpass_object = dacite.from_dict(
+            data_class=GoldPass,
+            data=goldpass_data,
+            config=dacite.config.Config(type_hooks={str: utils.rawtime_to_datetime}),
+        )
+        return goldpass_object
+
+    async def all_locations(self):
+        """
+        List all locations.
+
+        Returns
+        -------
+        dict
+            dict with key, value pairs like `str`: ``Location``.
+            Key can either be a location name or country code
+
+        Examples
+        --------
+        >>> locations = await client.all_locations()
+        >>> assert locations['ru'] == locations['russia']
+        >>> print(locations['ru']) # however, is is not recommended, use ``client.get_location`` instead
+        # TODO: Location(...)
+        """
+
+        if not hasattr(self, "_locations"):
+            await self._init_locations()
+        return self._locations
+
+    async def get_location(self, location_name: LocationName | CountryCode):
+        """
+        Get location information
+
+        Parameters
+        ----------
+        location_name : str
+            Location name or country code
+
+        Returns
+        -------
+        ``Location``
+
+        Examples
+        --------
+        >>> location1 = await client.get_location('rU')
+        >>> location2 = await client.get_location('ruSSia')
+        >>> assert location1.id == location2.id
+
+        >>> location3 = await client.get_location('kenya')
+        >>> print(location3.id, location3.country_code)
+        # TODO: ...
+        """
+
+        locations_mapping = await self.all_locations()
+        name = location_name.lower()
+        loc = locations_mapping.get(name)
+        if loc is None:
+            raise UnknownLocationError(loc)
+        return loc
+
+    async def all_clan_labels(self):
+        """
+        List clan labels
+
+        Returns
+        -------
+        dict
+            dict with key, value pairs like `str`: ``ClanLabel``.
+
+        Examples
+        --------
+        >>> labels = await client.all_clan_labels()
+        >>> print(labels['clan wars']) # however, is is not recommended, use ``client.get_clan_label`` instead
+        # TODO: ClanLabel(...)
+        """
+
+        if not hasattr(self, "_clan_labels"):
+            await self._init_clan_labels()
+        return self._clan_labels
+
+    async def get_clan_label(self, label_name: str):
+        """
+        Get clan label information
+
+        Parameters
+        ----------
+        label_name : str
+            Label name
+
+        Returns
+        -------
+        ``ClanLabel``
+
+        Examples
+        --------
+        >>> label = await client.get_clan_label('clAn Wars')
+        >>> print(label.id, label.name)
+        # TODO: ...
+        """
+
+        labels_mapping = await self.all_clan_labels()
+        name = label_name.lower()
+        label = labels_mapping.get(name)
+        if label is None:
+            raise UnknownClanLabelError(label)
+        return label
+
+    async def all_clan_leagues(self):
+        """
+        List clan leagues
+
+        Returns
+        -------
+        dict
+            dict with key, value pairs like `str`: ``ClanLeague``.
+
+        Examples
+        --------
+        >>> leagues = await client.all_clan_leagues()
+        >>> print(leagues['international']) # however, it is not recommended, use ``client.get_clan_league`` instead
+        # TODO: League(...)
+        """
+
+        if not hasattr(self, "_clan_leagues"):
+            await self._init_clan_leagues()
+        return self._clan_leagues
+
+    async def get_clan_league(self, league_name: str):
+        """
+        Get information about clan league
+
+        Parameters
+        ----------
+        league_name : str
+            League name
+
+        Returns
+        -------
+        ``ClanLeague``
+
+        Examples
+        --------
+        >>> league = await client.get_clan_league('international')
+        >>> print(league.id, league.name)
+        # TODO: ...
+        """
+
+        leagues_mapping = await self.all_clan_leagues()
+        name = league_name.lower()
+        league = leagues_mapping.get(name)
+        if league is None:
+            raise ValueError
+        return league
+
+    async def all_player_labels(self):
+        """
+        List player labels
+
+        Returns
+        -------
+        dict
+            dict with key, value pairs like `str`: ``PlayerLabel``.
+
+        Examples
+        --------
+        >>> labels = await client.all_player_labels()
+        >>> print(labels['...']) # however, it is not recommended, use ``client.get_player_label`` instead
+        # TODO: PlayerLabel(...)
+        """
+
+        if not hasattr(self, "_player_labels"):
+            await self._init_player_labels()
+        return self._player_labels
+
+    async def get_player_label(self, label_name: str):
+        """
+        Get player label information
+
+        Parameters
+        ----------
+        label_name : str
+            Label name
+
+        Returns
+        -------
+        ``PlayerLabel``
+
+        Examples
+        --------
+        >>> label = await client.get_player_label('...')
+        >>> print(label.id, label.name)
+        # TODO: ...
+        """
+
+        labels_mapping = await self.all_player_labels()
+        name = label_name.lower()
+        label = labels_mapping.get(name)
+        if label is None:
+            raise ValueError
+        return label
+
+    async def all_player_leagues(self):
+        """
+        List player leagues
+
+        Returns
+        -------
+        ``PlayerLeague``
+
+        Examples
+        --------
+        >>> leagues = await client.all_player_leagues()
+        >>> print(leagues['...']) # not recommended, use ``client.get_player_league`` instead
+        # TODO: League(...)
+        """
+
+        if not hasattr(self, "_player_leagues"):
+            await self._init_player_leagues()
+        return self._player_leagues
+
+    async def get_player_league(self, league_name: str):
+        """
+        Get information about player league
+
+        Parameters
+        ----------
+        league_name : str
+            League name
+
+        Returns
+        -------
+        ``PlayerLeague``
+
+        Examples
+        --------
+        >>> league = await client.get_player_league('...')
+        >>> print(league.id, league.name)
+        # TODO: ...
+        """
+
+        leagues_mapping = await self.all_player_leagues()
+        name = league_name.lower()
+        league = leagues_mapping.get(name)
+        if league is None:
+            raise ValueError
+        return league
