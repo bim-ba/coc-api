@@ -208,3 +208,17 @@ class Player:
 class GoldPass:
     start_time: datetime | str | Any  # datetime
     end_time: datetime | str | Any  # datetime
+
+
+@dataclass(frozen=True)
+class Key:
+    id: str
+    name: str
+    description: str | None
+    allowance: List[str]
+    token: str
+    # developer_id: str
+    # origins: Any
+    # valid_until: Any
+    # tier: str
+    # scopes: List[str]

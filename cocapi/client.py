@@ -1,6 +1,6 @@
 import asyncio
 import logging
-from typing import Dict, List, Optional, Text
+from typing import Dict, List, Optional
 
 import aiohttp
 import dacite.core as dacite
@@ -9,6 +9,8 @@ import dacite.config
 
 from . import api
 from . import utils
+from .baseclient import BaseClient
+from .exceptions import UnknownLocationError, UnknownClanLabelError
 from .aliases import (
     ClanWarFrequency,
     CountryCode,
@@ -17,8 +19,8 @@ from .aliases import (
     PositiveInt,
     Tag,
 )
-from .exceptions import UnknownLocationError, UnknownClanLabelError
 from .models import (
+    Key,
     Clan,
     ClanLabel,
     ClanWarLeague,
@@ -28,7 +30,6 @@ from .models import (
     PlayerLabel,
     PlayerLeague,
 )
-from .baseclient import BaseClient
 
 
 class Client(BaseClient):
@@ -36,21 +37,18 @@ class Client(BaseClient):
     Client class
     """
 
-    _uri = "https://api.clashofclans.com"
+    # public attributes
+    _locations: Dict[str, Location]
+    _clan_labels: Dict[str, ClanLabel]
+    _clan_leagues: Dict[str, ClanWarLeague]
+    _player_labels: Dict[str, PlayerLabel]
+    _player_leagues: Dict[str, PlayerLeague]
 
-    _locations: Dict[Text, Location]
-    _clan_labels: Dict[Text, ClanLabel]
-    _clan_leagues: Dict[Text, ClanWarLeague]
-    _player_labels: Dict[Text, PlayerLabel]
-    _player_leagues: Dict[Text, PlayerLeague]
-
-    __token: Text
+    # private attributes
+    __token: str
+    __email: str
+    __password: str
     __session: aiohttp.ClientSession
-
-    # public properties
-    @property
-    def uri(self):
-        return self._uri
 
     # private properties
     @property
@@ -61,11 +59,21 @@ class Client(BaseClient):
     def _session(self):
         return self.__session
 
-    def __init__(self, token: Text):
-        logging.basicConfig(
-            level=logging.WARNING, format="[%(created)f] [%(levelname)s] %(message)s"
-        )
+    @property
+    def _email(self):
+        if not hasattr(self, "_Client__email"):
+            raise AttributeError("Credentials was not provided while initialization.")
+        return self.__email
 
+    @property
+    def _password(self):
+        if not hasattr(self, "_Client__password"):
+            raise AttributeError("Credentials was not provided while initialization.")
+        return self.__password
+
+    def __init__(
+        self, token: str, *, email: Optional[str] = None, password: Optional[str] = None
+    ):
         try:
             _ = asyncio.get_running_loop()
         except RuntimeError as error:
@@ -73,9 +81,12 @@ class Client(BaseClient):
                 "Client class should be instantiated only within async method!"
             ) from error
 
+        logging.basicConfig(
+            level=logging.WARNING, format="[%(created)f] [%(levelname)s] %(message)s"
+        )
+
         self.__token = token
         self.__session = aiohttp.ClientSession(
-            base_url=self._uri,
             headers={
                 "accept": "application/json",
                 "authorization": f"Bearer {token}",
@@ -83,10 +94,130 @@ class Client(BaseClient):
             timeout=aiohttp.ClientTimeout(total=60),
         )
 
+        if email or password:
+            if not email and password:
+                raise ValueError(
+                    "If you providing credentials, you must provide both email and password!"
+                )
+            self.__email = email
+            self.__password = password
+
     async def close(self):
         # https://docs.aiohttp.org/en/stable/client_advanced.html#graceful-shutdown
-        await self.__session.close()
+        await self._session.close()
         await asyncio.sleep(0)
+
+    async def login(self):
+        """
+        Log into account using credentials that have been provided while initialization.
+
+        Examples
+        --------
+        >>> await client.login()
+        # TODO: ...
+        """
+
+        await api.make_request(
+            self._session,
+            api.ServiceMethods.LOGIN(),
+            json={"email": self._email, "password": self._password},
+        )
+
+    async def list_keys(self):
+        """
+        List all keys that your account have.
+
+        Returns
+        -------
+        List[Key]
+            List of keys
+
+        Examples
+        --------
+        >>> await client.list_keys()
+        # TODO: ...
+        """
+
+        json = await api.jsonify(
+            await api.make_request(
+                self._session,
+                api.ServiceMethods.LIST_KEY(),
+            )
+        )
+
+        json = json["keys"]
+        for key_data in json:
+            key_data["allowance"] = key_data.pop("cidr_ranges")
+            key_data["token"] = key_data.pop("key")
+
+        data = [dacite.from_dict(data_class=Key, data=raw) for raw in json]
+        return data
+
+    async def create_key(
+        self,
+        *,
+        key_name: str,
+        allowed_ips: List[str],
+        key_description: Optional[str] = None,
+    ):
+        """
+        Create new API key in your account.
+        You can use this key after creation as well.
+
+        Parameters
+        ----------
+        key_name : str
+            Key name
+        key_description : str (default = `None`)
+            Key description
+        allowed_ips : List[str]
+            List of allowed ips, for which this key is intended
+
+        Returns
+        -------
+        Key
+            Created key
+
+        Examples
+        --------
+        >>> await client.create_key(key_name='dababy', allowed_ips=['8.8.8.8'])
+        # TODO: ...
+        """
+
+        payload = {"name": key_name, "cidrRanges": allowed_ips}
+        if key_description:
+            payload["description"] = key_description
+
+        json = await api.jsonify(
+            await api.make_request(
+                self._session, api.ServiceMethods.CREATE_KEY(), json=payload
+            )
+        )
+        key_data = json["key"]
+        key_data["allowance"] = key_data.pop("cidr_ranges")
+        key_data["token"] = key_data.pop("key")
+
+        key = dacite.from_dict(data_class=Key, data=key_data)
+        return key
+
+    async def revoke_key(self, key_id: str):
+        """
+        Removes already created API key in your account.
+
+        Parameters
+        ----------
+        key_id : str
+            Key id
+
+        Examples
+        --------
+        >>> await client.revoke_key('xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx')
+        # TODO: ...
+        """
+
+        await api.make_request(
+            self._session, api.ServiceMethods.REVOKE_KEY(), json={"id": key_id}
+        )
 
     async def _init_locations(self):
         """
@@ -94,7 +225,9 @@ class Client(BaseClient):
         """
 
         location_mapping = {}
-        location_data = await api.make_request(self.__session, api.Methods.LOCATIONS())
+        location_data = await api.jsonify(
+            await api.make_request(self._session, api.Methods.LOCATIONS())
+        )
 
         for data in location_data["items"]:
             location = dacite.from_dict(
@@ -116,8 +249,8 @@ class Client(BaseClient):
         """
 
         clan_labels_mapping = {}
-        clan_label_data = await api.make_request(
-            self.__session, api.Methods.CLAN_LABELS()
+        clan_label_data = await api.jsonify(
+            await api.make_request(self._session, api.Methods.CLAN_LABELS())
         )
 
         for data in clan_label_data["items"]:
@@ -137,8 +270,8 @@ class Client(BaseClient):
         """
 
         clan_leagues_mapping = {}
-        clan_leagues_data = await api.make_request(
-            self.__session, api.Methods.WARLEAGUES()
+        clan_leagues_data = await api.jsonify(
+            await api.make_request(self._session, api.Methods.WARLEAGUES())
         )
 
         for data in clan_leagues_data["items"]:
@@ -158,8 +291,8 @@ class Client(BaseClient):
         """
 
         player_labels_mapping = {}
-        player_labels_data = await api.make_request(
-            self.__session, api.Methods.WARLEAGUES()
+        player_labels_data = await api.jsonify(
+            await api.make_request(self._session, api.Methods.WARLEAGUES())
         )
 
         for data in player_labels_data["items"]:
@@ -179,8 +312,8 @@ class Client(BaseClient):
         """
 
         player_leagues_mapping = {}
-        player_leagues_data = await api.make_request(
-            self.__session, api.Methods.WARLEAGUES()
+        player_leagues_data = await api.jsonify(
+            await api.make_request(self._session, api.Methods.WARLEAGUES())
         )
 
         for data in player_leagues_data["items"]:
@@ -283,8 +416,8 @@ class Client(BaseClient):
             comma_separated_lab_ids = ",".join(map(str, lab_ids))
             params["labelIds"] = comma_separated_lab_ids
 
-        clans_data = await api.make_request(
-            self.__session, api.Methods.CLANS(), params=params
+        clans_data = await api.jsonify(
+            await api.make_request(self._session, api.Methods.CLANS(), params=params)
         )
         tag_list = [clan["tag"] for clan in clans_data["items"]]
         return tag_list
@@ -321,8 +454,8 @@ class Client(BaseClient):
         """
 
         shaped_tag = utils.shape_tag(tag)
-        clan_data = await api.make_request(
-            self.__session, api.Methods.CLAN(clantag=shaped_tag)
+        clan_data = await api.jsonify(
+            await api.make_request(self._session, api.Methods.CLAN(clantag=shaped_tag))
         )
 
         member_tags = [member["tag"] for member in clan_data["member_list"]]
@@ -338,15 +471,17 @@ class Client(BaseClient):
         clan_data["war"]["league"] = clan_data.pop("war_league")
 
         if clan_data["war"]["is_war_log_public"]:
-            returned_war_data = await asyncio.gather(
+            raw_current_war, raw_warlog = await asyncio.gather(
                 api.make_request(
-                    self.__session, api.Methods.CLAN_CURRENT_WAR(clantag=shaped_tag)
+                    self._session, api.Methods.CLAN_CURRENT_WAR(clantag=shaped_tag)
                 ),
                 api.make_request(
-                    self.__session, api.Methods.CLAN_WARLOG(clantag=shaped_tag)
+                    self._session, api.Methods.CLAN_WARLOG(clantag=shaped_tag)
                 ),
             )
-            war_data, war_log_data = returned_war_data
+            war_data, war_log_data = await asyncio.gather(
+                api.jsonify(raw_current_war), api.jsonify(raw_warlog)
+            )
             war_state = war_data["state"]
 
             clan_data["war"]["state"] = war_state
@@ -385,8 +520,10 @@ class Client(BaseClient):
         """
 
         shaped_tag = utils.shape_tag(tag)
-        player_data = await api.make_request(
-            self.__session, api.Methods.PLAYER(playertag=shaped_tag)
+        player_data = await api.jsonify(
+            await api.make_request(
+                self._session, api.Methods.PLAYER(playertag=shaped_tag)
+            )
         )
         player_data["clan"] = player_data["clan"]["tag"]
 
@@ -415,8 +552,10 @@ class Client(BaseClient):
         """
 
         loc = await self.get_location(location)
-        rankings_data = await api.make_request(
-            self.__session, api.Methods.CLAN_RANKINGS(location_id=loc.id)
+        rankings_data = await api.jsonify(
+            await api.make_request(
+                self._session, api.Methods.CLAN_RANKINGS(location_id=loc.id)
+            )
         )
 
         tag_list = [clan["tag"] for clan in rankings_data["items"]]
@@ -444,8 +583,10 @@ class Client(BaseClient):
         """
 
         loc = await self.get_location(location)
-        rankings_data = await api.make_request(
-            self.__session, api.Methods.PLAYER_RANKINGS(location_id=loc.id)
+        rankings_data = await api.jsonify(
+            await api.make_request(
+                self._session, api.Methods.PLAYER_RANKINGS(location_id=loc.id)
+            )
         )
 
         tag_list = [clan["tag"] for clan in rankings_data["items"]]
@@ -475,8 +616,10 @@ class Client(BaseClient):
         """
 
         loc = await self.get_location(location)
-        rankings_data = await api.make_request(
-            self.__session, api.Methods.CLAN_VERSUS_RANKINGS(location_id=loc.id)
+        rankings_data = await api.jsonify(
+            await api.make_request(
+                self._session, api.Methods.CLAN_VERSUS_RANKINGS(location_id=loc.id)
+            )
         )
 
         tag_list = [clan["tag"] for clan in rankings_data["items"]]
@@ -506,8 +649,10 @@ class Client(BaseClient):
         """
 
         loc = await self.get_location(location)
-        rankings_data = await api.make_request(
-            self.__session, api.Methods.PLAYER_VERSUS_RANKINGS(location_id=loc.id)
+        rankings_data = await api.jsonify(
+            await api.make_request(
+                self._session, api.Methods.PLAYER_VERSUS_RANKINGS(location_id=loc.id)
+            )
         )
 
         tag_list = [clan["tag"] for clan in rankings_data["items"]]
@@ -528,7 +673,9 @@ class Client(BaseClient):
         #TODO: examples
         """
 
-        goldpass_data = await api.make_request(self.__session, api.Methods.GOLDPASS())
+        goldpass_data = await api.jsonify(
+            await api.make_request(self._session, api.Methods.GOLDPASS())
+        )
 
         goldpass_object = dacite.from_dict(
             data_class=GoldPass,

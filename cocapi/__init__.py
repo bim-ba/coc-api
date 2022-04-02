@@ -19,5 +19,5 @@ __all__ = [
     "__api_version__",
 ]
 
-__version__ = "1.0.0.dev3"
+__version__ = "1.0.0.dev4"
 __api_version__ = "1"

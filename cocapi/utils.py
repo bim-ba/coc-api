@@ -1,10 +1,9 @@
-from typing import Text
 from datetime import datetime
 
 from .aliases import Tag
 
 
-def rawtime_to_datetime(date_string: Text):
+def rawtime_to_datetime(date_string: str):
     fmt = "%Y%m%dT%H%M%S.%fZ"
     try:
         time = datetime.strptime(date_string, fmt)

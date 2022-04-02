@@ -8,27 +8,21 @@ class ClientRequestError(Exception):
 
     response: ClientResponse
     message: str
+    data: Any
 
-    MESSAGE = "Error while making request! Server returned {status_code} for {url}."
-    ADDITIONAL_MESSAGE = "[{reason}] [{message}]"
+    MESSAGE = "Error while making request! Server returned {status_code} for {url}. Check ``data`` for additional details!"
 
     def __init__(
         self,
         response: ClientResponse,
         *,
-        custom_reason: Optional[str] = None,
-        custom_message: Optional[str] = None,
+        data: Optional[Any] = None,
     ):
         self.response = response
-        self.message = ClientRequestError.MESSAGE.format(
+        self.message = self.MESSAGE.format(
             status_code=response.status, url=response.url
         )
-
-        if custom_reason or custom_message:
-            formatted_message = ClientRequestError.ADDITIONAL_MESSAGE.format(
-                reason=custom_reason, message=custom_message
-            )
-            self.message = f"{self.message} {formatted_message}"
+        self.data = data
 
         super().__init__(self.message)
 
@@ -43,9 +37,7 @@ class JSONContentTypeError(Exception):
 
     def __init__(self, content_type: str, error: Any):
         self.content_type = content_type
-        self.message = JSONContentTypeError.MESSAGE.format(
-            content_type=content_type, error=error
-        )
+        self.message = self.MESSAGE.format(content_type=content_type, error=error)
         super().__init__(self.message)
 
 
@@ -59,7 +51,7 @@ class UnknownLocationError(Exception):
 
     def __init__(self, location: Any):
         self.location = location
-        self.message = UnknownLocationError.MESSAGE
+        self.message = self.MESSAGE
         super().__init__(self.message)
 
     def __str__(self):
@@ -76,7 +68,7 @@ class UnknownClanLabelError(Exception):
 
     def __init__(self, clan_label: Any):
         self.clan_label = clan_label
-        self.message = UnknownClanLabelError.MESSAGE
+        self.message = self.MESSAGE
         super().__init__(self.message)
 
     def __str__(self):
