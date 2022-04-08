@@ -1,8 +1,6 @@
 # type: ignore
 # pylint: disable-all
 
-from . import default_client
-
 
 async def test_goldpass(default_client):
     goldpass = await default_client.goldpass()

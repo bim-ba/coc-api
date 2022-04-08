@@ -3,8 +3,6 @@
 
 import asyncio
 
-from . import default_client
-
 
 async def test_clan_versus_rankings(default_client):
     clans = await default_client.clan_versus_rankings("russia")

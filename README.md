@@ -521,14 +521,14 @@ Returns [Key](#key-model) model.
 
 | Parameter | Type | Description |
 | :-------- | :--: | :---------- |
-| key_name | `str` | _required_. Key name |
-| key_description | `str` | _optional_. Key description |
+| name | `str` | _required_. Key name |
+| description | `str` | _optional_. Key description |
 | allowed_ips | `List[str]` | _required_. List of allowed ips, for which this key is intended |
 
 Examples:
 
 ```py
->>> key = await client.create_key(key_name='dababy', allowed_ips=['8.8.8.8'])
+>>> key = await client.create_key(name='dababy', allowed_ips=['8.8.8.8'])
 >>> print(key.token)
 # TODO: ...
 ```

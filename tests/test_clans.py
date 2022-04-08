@@ -3,8 +3,6 @@
 
 import asyncio
 
-from . import default_client
-
 
 async def test_clans_small(default_client):
     clans = await default_client.clans(

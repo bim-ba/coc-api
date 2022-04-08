@@ -3,8 +3,6 @@
 
 import asyncio
 
-from . import default_client
-
 
 async def test_clan(default_client):
     clan = await default_client.clan("#LQGPL8LL")
@@ -13,9 +11,8 @@ async def test_clan(default_client):
 
 
 async def test_clan_tag_variety(default_client):
-    clan1, clan2, clan3 = await asyncio.gather(
+    clan1, clan2 = await asyncio.gather(
         default_client.clan("#LQGPL8LL"),
-        default_client.clan("LQGPL8LL"),
-        default_client.clan("lqGPL8ll"),
+        default_client.clan("#lqGPL8ll"),
     )
-    assert clan1.tag == clan2.tag == clan3.tag
+    assert clan1.tag == clan2.tag

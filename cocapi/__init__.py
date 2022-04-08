@@ -1,23 +1,20 @@
-from . import aliases
-from . import api
-from . import client
-from . import exceptions
-from . import models
+from .client import api, Client
+from . import types
+from .types import aliases
 from . import utils
-
-from .client import Client
+from .utils import exceptions
 
 __all__ = [
-    "aliases",
     "api",
     "client",
-    "exceptions",
-    "models",
+    "types",
+    "aliases",
     "utils",
+    "exceptions",
     "Client",
     "__version__",
     "__api_version__",
 ]
 
-__version__ = "1.0.0.dev4"
+__version__ = "1.0.0.dev6"
 __api_version__ = "1"

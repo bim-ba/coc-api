@@ -10,7 +10,7 @@ RelativeUrl = Url
 RequestMethod = Literal[
     "GET", "HEAD", "POST", "PUT", "DELETE", "CONNECT", "OPTIONS", "TRACE", "PATCH"
 ]
-Tag = CaseInsensitiveStr
+Tag = str
 """
 starts with #, only digits and capital letters, len = 1-9\n
 regex = r'#[1-9A-Z]{1,9}'
@@ -26,7 +26,7 @@ ClanWarFrequency = Literal[
     "unknown",
 ]
 ClanWarPreference = Literal["in", "out"]
-ClanWarResultL = Literal["win", "lose", "tie"]
+ClanWarActualResult = Literal["win", "lose", "tie"]
 ClanWarState = Literal["warEnded", "notInWar", "preparation", "inWar"]
 Village = Literal["home", "builderBase"]
 LocationName = CaseInsensitiveStr

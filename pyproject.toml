@@ -8,8 +8,7 @@ license = "No License"
 [tool.poetry.dependencies]
 python = "^3.10"
 aiohttp = "^3.8.1"
-dacite = "^1.6.0"
-pyhumps = "^3.5.3"
+pydantic = "^1.9.0"
 
 [tool.poetry.dev-dependencies]
 pytest = "^7.1.1"
@@ -19,3 +18,7 @@ pytest-asyncio = "^0.18.2"
 [build-system]
 requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+token = "" # FIXME: to pass tests, paste your API token here
