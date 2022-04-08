@@ -30,21 +30,6 @@ async def main():
     print(clans)
     # ['#2P8QU22L2', '#2PPYL9928', '#22GLLRQYY', ...]
 
-    first_clan, second_clan, third_clan = await asyncio.gather(
-        client.clan(clans[0]),
-        client.clan(clans[1]),
-        client.clan(clans[2])
-    )
-
-    print(first_clan.name, first_clan.location)
-    # bomb Location(id=32000193, isCountry=true, name='russia', countryCode='ru')
-
-    print(second_clan.required_trophies, second_clan.required_townhall_level)
-    # 200 3
-
-    print(third_clan.description)
-    # просто клан 12+ без матов ну и всё
-
 if __name__ == '__main__':
     asyncio.run(main())
 ```
@@ -71,8 +56,7 @@ poetry install
 | Requirement | Version |
 | :---------- | :------ |
 | aiohttp | ^3.8.1 |
-| dacite | ^1.6.0 |
-| pyhumps | ^3.5.3 |
+| pydantic | ^1.9.0 |
 | pytest | _dev_. ^7.1.1 |
 | pytest-asyncio | _dev_. ^0.18.3 |
 | black | _dev_. ^22.3.0 |
@@ -103,10 +87,6 @@ poetry install
     * [get_player_label](#method-get-player-label)
     * [all_player_leagues](#method-all-player-leagues)
     * [get_player_league](#method-get-player-league)
-    * [login](#method-login)
-    * [list_keys](#method-list-keys)
-    * [create_key](#method-create-key)
-    * [revoke_key](#method-revoke-key)
   * [Models](#models)
     * [Label](#label-model)
     * [League](#league-model)
@@ -128,7 +108,6 @@ poetry install
     * [ClanWarInfoClan](#clan-war-info-clan-model)
     * [ClanChatLanguage](#clan-chat-language-model)
     * [GoldPass](#goldpass-model)
-    * [Key](#key-model)
   * [Exceptions](#exceptions)
     * [ClientRequestError](#exception-client-request-error)
     * [JSONContentTypeError](#exception-json-content-type-error)
@@ -490,64 +469,6 @@ Examples:
 # TODO: ...
 ```
 
-<h3 id="method-login"><code>login</code></h3>
-
-Log into account using credentials that have been provided while initialization.
-
-Examples:
-
-```py
->>> await client.login()
-```
-
-<h3 id="method-list-keys"><code>list_keys</code></h3>
-
-List all keys that your account have.
-
-Returns list of [Key](#key-model) models.
-
-Examples:
-
-```py
->>> keys = await client.list_keys()
-# TODO: ...
-```
-
-<h3 id="method-create-key"><code>create_key</code></h3>
-
-Create new API key in your account.
-
-Returns [Key](#key-model) model.
-
-| Parameter | Type | Description |
-| :-------- | :--: | :---------- |
-| name | `str` | _required_. Key name |
-| description | `str` | _optional_. Key description |
-| allowed_ips | `List[str]` | _required_. List of allowed ips, for which this key is intended |
-
-Examples:
-
-```py
->>> key = await client.create_key(name='dababy', allowed_ips=['8.8.8.8'])
->>> print(key.token)
-# TODO: ...
-```
-
-<h3 id="method-revoke-key"><code>revoke_key</code></h3>
-
-Removes already created API key in your account.
-
-| Parameter | Type | Description |
-| :-------- | :--: | :---------- |
-| key_id | `int` | _required_. Key id |
-
-Examples:
-
-```py
->>> await client.revoke_key('xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx')
-# TODO: ...
-```
-
 ## Models
 
 Models are corresponds to the original [Clash of Clans API Models](https://developer.clashofclans.com/#/documentation), **but with some changes**. I have made small of these models (comparing them to the original ones) due to the fact that I have undertaken a slightly different design of these models in order to simplify and unify them.  
@@ -804,55 +725,39 @@ This model describes information about current gold pass.
 | start_time | [`datetime.datetime`](https://docs.python.org/3/library/datetime.html#datetime-objects) | Current season start time (UTC) <br/> _pendulum may be good here_ |
 | end_time | [`datetime.datetime`](https://docs.python.org/3/library/datetime.html#datetime-objects) | Current season end time (UTC) <br/> _pendulum may be good here_ |
 
-<h3 id="key-model"><code>Key</code></h3>
-
-This model describes information about API key.
-
-| Field | Type | Description |
-| :---- | :--: | :---------- |
-| id | `int` | Id |
-| name | `str` | Name |
-| description | `str` \| `None` | Description |
-| allowance | `list[str]` | Allowed ips, for which this key is intended |
-| token | `str` | Token |
-
 ## Exceptions
 
 <h3 id="client-request-error"><code>ClientRequestError</code></h3>
 
-Raises while something went wrong while making request.
+Raises when something went wrong while making request.
 
 | Field | Type | Description |
 | :---- | :--: | :---------- |
 | response | `aiohttp.ClientResponse` | Response from server |
-| message | <details><summary>`str`</summary>````'Error while making request! Server returned {status_code} for {url}.'````</details> | _can be supplemented_. Detailed message on whats going on |
+| message | `str` | _vary_. Detailed message on whats going on |
+| data | `Any` \| `None` | _optional_. Extra data about response from server |
 
-<h3 id="exception-json-content-type-error"><code>JSONContentTypeError</code></h3>
+<h3 id="client-request-error"><code>IncorrectParameters</code></h3>
+<h3 id="client-request-error"><code>AccessDenied</code></h3>
+<h3 id="client-request-error"><code>ResourceNotFound</code></h3>
+<h3 id="client-request-error"><code>TooManyRequests</code></h3>
+<h3 id="client-request-error"><code>UnknownError</code></h3>
+<h3 id="client-request-error"><code>ServiceUnavailable</code></h3>
 
-Raises while fetching some resource with content that cannot be decoded into JSON.
+<h3 id="client-request-error"><code>UnknownDataError</code></h3>
 
-| Field | Type | Description |
-| :---- | :--: | :---------- |
-| content_type | `str` | Resource content type |
-| message | <details><summary>`str`</summary>````'aiohttp throws an error while decoding JSON from the request! Content type was {content_type}: {error}'````</details> | _constant_. Detailed message on whats going on |
-
-<h3 id="exception-unknown-location-error"><code>UnknownLocationError</code></h3>
-
-Raises when you trying to pass unknown location to function parameters.
-
-| Field | Type | Description |
-| :---- | :--: | :---------- |
-| location | `Any` | What did you pass |
-| message | <details><summary>`str`</summary>````'Unknown location! To get available locations, check `self._locations` or official API reference https://developer.clashofclans.com/#/documentation for "locations/locations" block'````</details> | _constant_. Detailed message on whats going on |
-
-<h3 id="exception-unknown-clan-label-error"><code>UnknownClanLabelError</code></h3>
-
-Raises when you trying to pass unknown clan label to function parameters.
+Raises when something went wrong while passing some data to method.
 
 | Field | Type | Description |
 | :---- | :--: | :---------- |
-| label | `Any` | What did you pass |
-| message | <details><summary>`str`</summary>````'Unknown clan label! To get available clan labels, check `self._locations` or official API reference https://developer.clashofclans.com/#/documentation for "locations/locations" block'````</details> | _constant_. Detailed message on whats going on |
+| data | `Any` | Data that has been passed |
+| message | `str` \| `None` | _optional_. _vary_. Detailed message on whats going on |
+
+<h3 id="client-request-error"><code>UnknownLocationError</code></h3>
+<h3 id="client-request-error"><code>UnknownClanLabelError</code></h3>
+<h3 id="client-request-error"><code>UnknownClanLeagueError</code></h3>
+<h3 id="client-request-error"><code>UnknownPlayerLabelError</code></h3>
+<h3 id="client-request-error"><code>UnknownPlayerLeagueError</code></h3>
 
 ## Aliases
 

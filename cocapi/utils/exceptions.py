@@ -15,9 +15,9 @@ class ClientRequestError(Exception):
     - ``503`` Service is temprorarily unavailable because of maintenance.
     """
 
-    data: Any
-    message: str
     response: aiohttp.ClientResponse
+    message: str
+    data: Any | None
 
     MESSAGE = "Error while making request! Server returned {status_code} for {url}. Check ``data`` for additional details!"
     CODE: int | None = None
@@ -81,8 +81,8 @@ class UnknownDataError(Exception):
     - ``player league``
     """
 
-    data: Any
     message: str | None
+    data: Any
 
     MESSAGE: str | None = None
 
