@@ -92,7 +92,7 @@ class ClanWarResult(DefaultBaseModel):
 
 class ClanWar(
     DefaultBaseModel,
-    alias_generator=lambda field_name: f"war{utils.toCamel(field_name, lower_first=False)}",
+    alias_generator=lambda field_name: f"war{utils.toCamel(field_name, lower_first=False)}",  # type: ignore
 ):
     wins: int
     losses: int

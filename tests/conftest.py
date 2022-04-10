@@ -15,7 +15,9 @@ def pytest_addoption(parser, pluginmanager):
 def pytest_sessionstart(session):
     token = session.config.getini("token")
     if not token:
-        pytest.exit("Client API token was not provided!")
+        pytest.exit(
+            "To pass tests you need to provide an API token, check 'pyproject.toml' file!"
+        )
 
 
 @pytest.fixture

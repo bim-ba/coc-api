@@ -1,11 +1,11 @@
 import asyncio
-from typing import Mapping, List, Optional
+from typing import Optional
 
 from . import api
-from .baseclient import BaseClient
 from .. import utils
-from ..utils import exceptions
 from ..types import (
+    aliases,
+    exceptions,
     Clan,
     ClanLabel,
     ClanWarLeague,
@@ -15,14 +15,7 @@ from ..types import (
     PlayerLabel,
     PlayerLeague,
 )
-from ..types.aliases import (
-    Tag,
-    PositiveInt,
-    ClanWarFrequency,
-    LocationName,
-    CountryCode,
-    LabelName,
-)
+from .baseclient import BaseClient
 
 
 class Client(BaseClient):
@@ -31,14 +24,14 @@ class Client(BaseClient):
     """
 
     # private attributes
-    _locations: Mapping[str, Location]
-    _clan_labels: Mapping[str, ClanLabel]
-    _clan_leagues: Mapping[str, ClanWarLeague]
-    _player_labels: Mapping[str, PlayerLabel]
-    _player_leagues: Mapping[str, PlayerLeague]
+    _locations: dict[str, Location]
+    _clan_labels: dict[str, ClanLabel]
+    _clan_leagues: dict[str, ClanWarLeague]
+    _player_labels: dict[str, PlayerLabel]
+    _player_leagues: dict[str, PlayerLeague]
 
     async def _get_locations(self):
-        location_mapping = {}  # type: Mapping[str, Location]
+        location_mapping = {}  # type: dict[str, Location]
         response = await self.request(api.Methods.LOCATIONS())
         location_data = await response.json()
 
@@ -53,7 +46,7 @@ class Client(BaseClient):
         return location_mapping
 
     async def _get_clan_labels(self):
-        clan_labels_mapping = {}  # type: Mapping[str, ClanLabel]
+        clan_labels_mapping = {}  # type: dict[str, ClanLabel]
         response = await self.request(api.Methods.CLAN_LABELS())
         clan_label_data = await response.json()
 
@@ -65,7 +58,7 @@ class Client(BaseClient):
         return clan_labels_mapping
 
     async def _get_clan_leagues(self):
-        clan_leagues_mapping = {}  # type: Mapping[str, ClanWarLeague]
+        clan_leagues_mapping = {}  # type: dict[str, ClanWarLeague]
         response = await self.request(api.Methods.WARLEAGUES())
         clan_leagues_data = await response.json()
 
@@ -77,7 +70,7 @@ class Client(BaseClient):
         return clan_leagues_mapping
 
     async def _get_player_labels(self):
-        player_labels_mapping = {}  # type: Mapping[str, PlayerLabel]
+        player_labels_mapping = {}  # type: dict[str, PlayerLabel]
         response = await self.request(api.Methods.WARLEAGUES())
         player_labels_data = await response.json()
 
@@ -89,7 +82,7 @@ class Client(BaseClient):
         return player_labels_mapping
 
     async def _get_player_leagues(self):
-        player_leagues_mapping = {}  # type: Mapping[str, PlayerLeague]
+        player_leagues_mapping = {}  # type: dict[str, PlayerLeague]
         response = await self.request(api.Methods.WARLEAGUES())
         player_leagues_data = await response.json()
 
@@ -104,14 +97,14 @@ class Client(BaseClient):
         self,
         *,
         name: Optional[str] = None,
-        min_members: Optional[PositiveInt] = None,
-        max_members: Optional[PositiveInt] = None,
-        min_clan_points: Optional[PositiveInt] = None,
-        min_clan_level: Optional[PositiveInt] = None,
-        war_frequency: Optional[ClanWarFrequency] = None,
-        location: Optional[LocationName | CountryCode] = None,
-        labels: Optional[List[LabelName] | LabelName] = None,
-    ) -> List[Tag]:
+        min_members: Optional[aliases.PositiveInt] = None,
+        max_members: Optional[aliases.PositiveInt] = None,
+        min_clan_points: Optional[aliases.PositiveInt] = None,
+        min_clan_level: Optional[aliases.PositiveInt] = None,
+        war_frequency: Optional[aliases.ClanWarFrequency] = None,
+        location: Optional[aliases.LocationName | aliases.CountryCode] = None,
+        labels: Optional[list[aliases.LabelName] | aliases.LabelName] = None,
+    ) -> list[aliases.Tag]:
         """
         Search all clans by name and/or filtering the results using various criteria.
         At least one filtering criteria must be defined and if name is used as part of search,
@@ -177,7 +170,7 @@ class Client(BaseClient):
             if not isinstance(labels, list):
                 labels = [labels]
 
-            lab_ids: List[int] = []
+            lab_ids = []  # type: list[int]
 
             for lab in labels:
                 lab = lab.lower()
@@ -193,7 +186,7 @@ class Client(BaseClient):
         tag_list = [clan["tag"] for clan in clans_data["items"]]
         return tag_list
 
-    async def clan(self, tag: Tag) -> Clan:
+    async def clan(self, tag: aliases.Tag) -> Clan:
         """
         Get information about a single clan by clan tag.
         Clan tags can be found using clan search operation.
@@ -202,7 +195,7 @@ class Client(BaseClient):
         Parameters
         ----------
         tag : str
-            Tag.
+            Clan tag.
 
         Returns
         -------
@@ -265,7 +258,7 @@ class Client(BaseClient):
         clan_object = Clan(**clan_data)
         return clan_object
 
-    async def player(self, tag: Tag) -> Player:
+    async def player(self, tag: aliases.Tag) -> Player:
         """
         Get information about a single player by player tag.
         Player tags can be found either in game or by from clan member lists.
@@ -295,7 +288,9 @@ class Client(BaseClient):
         player_object = Player(**player_data)
         return player_object
 
-    async def clan_rankings(self, location: LocationName | CountryCode) -> List[Tag]:
+    async def clan_rankings(
+        self, location: aliases.LocationName | aliases.CountryCode
+    ) -> list[aliases.Tag]:
         """
         Get clan rankings for a specific location
 
@@ -323,7 +318,9 @@ class Client(BaseClient):
         tag_list = [clan["tag"] for clan in rankings_data["items"]]
         return tag_list
 
-    async def player_rankings(self, location: LocationName | CountryCode) -> List[Tag]:
+    async def player_rankings(
+        self, location: aliases.LocationName | aliases.CountryCode
+    ) -> list[aliases.Tag]:
         """
         Get player rankings for a specific location
 
@@ -352,8 +349,8 @@ class Client(BaseClient):
         return tag_list
 
     async def clan_versus_rankings(
-        self, location: LocationName | CountryCode
-    ) -> List[Tag]:
+        self, location: aliases.LocationName | aliases.CountryCode
+    ) -> list[aliases.Tag]:
         """
         Get clan versus rankings for a specific location
 
@@ -384,8 +381,8 @@ class Client(BaseClient):
         return tag_list
 
     async def player_versus_rankings(
-        self, location: LocationName | CountryCode
-    ) -> List[Tag]:
+        self, location: aliases.LocationName | aliases.CountryCode
+    ) -> list[aliases.Tag]:
         """
         Get player versus rankings for a specific location
 
@@ -458,7 +455,9 @@ class Client(BaseClient):
             setattr(self, "_locations", await self._get_locations())
         return self._locations
 
-    async def get_location(self, location_name: LocationName | CountryCode):
+    async def get_location(
+        self, location_name: aliases.LocationName | aliases.CountryCode
+    ):
         """
         Get location information
 

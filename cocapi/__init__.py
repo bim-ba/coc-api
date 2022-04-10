@@ -1,8 +1,8 @@
 from .client import api, Client
 from . import types
-from .types import aliases
 from . import utils
-from .utils import exceptions
+from .types import aliases
+from .types import exceptions
 
 __all__ = [
     "api",

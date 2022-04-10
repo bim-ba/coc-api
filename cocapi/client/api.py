@@ -1,159 +1,131 @@
-from typing import Any, Protocol
+from typing import Any, Optional
 from dataclasses import dataclass, field
 
 import aiohttp
 
 from ..types import aliases
-from ..utils import exceptions
+from ..types import exceptions
 
 
 @dataclass
 class BaseMethod:
-    method: aliases.RequestMethod
-    relative_url: aliases.RelativeUrl
-    url: aliases.Url = field(init=False)
+    # config
     base_url: aliases.Url | None = field(init=False, default=None)
+    default_http_method: aliases.RequestMethod | None = field(init=False, default=None)
+
+    # actual dataclass members
+    path: aliases.RelativeUrl
+    method: Optional[aliases.RequestMethod] = None
+    url: aliases.Url = field(init=False)
 
     def __post_init__(self):
         if not self.base_url:
-            raise AttributeError(
-                f"You must define static field ``base_url`` for {self.__class__}"
-            )
+            raise NotImplementedError(
+                f"You must define static field 'base_url' for {self.__class__}"
+            ) from None
 
-        self.url = f"{self.base_url}{self.relative_url}"
+        if not self.method and not self.default_http_method:
+            raise NotImplementedError(
+                f"You must define either static field 'default_http_method' or pass it directly in {self.__class__}"
+            ) from None
 
+        self.method = self.default_http_method if self.method is None else self.method
+        self.url = self.base_url + self.path
 
-class CallableWithPlayertag(Protocol):
-    # pylint: disable=no-method-argument
-    def __call__(*, playertag: str) -> BaseMethod:
-        ...
-
-
-class CallableWithClantag(Protocol):
-    # pylint: disable=no-method-argument
-    def __call__(*, clantag: str) -> BaseMethod:
-        ...
-
-
-class CallableWithWartag(Protocol):
-    # pylint: disable=no-method-argument
-    def __call__(*, wartag: str) -> BaseMethod:
-        ...
-
-
-class CallableWithLeagueId(Protocol):
-    # pylint: disable=no-method-argument
-    def __call__(*, league_id: int) -> BaseMethod:
-        ...
-
-
-class CallableWithLeagueIdAndSeasonId(Protocol):
-    # pylint: disable=no-method-argument
-    def __call__(*, league_id: int, season_id: int) -> BaseMethod:
-        ...
-
-
-class CallableWithLocationId(Protocol):
-    # pylint: disable=no-method-argument
-    def __call__(*, location_id: int) -> BaseMethod:
-        ...
+    def __call__(self, **kwargs: Any):
+        try:
+            self.url = self.url.format(**kwargs)
+            return self
+        except KeyError as error:
+            (missing_field,) = error.args
+            raise KeyError(
+                f"Missing field: '{missing_field}' when formatting {self.url}"
+            ) from error
 
 
 class Methods:
     class Method(BaseMethod):
         base_url = "https://api.clashofclans.com/v1"
+        default_http_method = "GET"
 
     # clans
-    CLANS = lambda: Methods.Method("GET", "/clans")
-    CLAN: CallableWithClantag = lambda *, clantag: Methods.Method(
-        "GET", f"/clans/{clantag}"
-    )
-    CLAN_WARLOG: CallableWithClantag = lambda *, clantag: Methods.Method(
-        "GET", f"/clans/{clantag}/warlog"
-    )
-    CLAN_MEMBERS: CallableWithClantag = lambda *, clantag: Methods.Method(
-        "GET", f"/clans/{clantag}/members"
-    )
-    CLAN_CURRENT_WAR: CallableWithClantag = lambda *, clantag: Methods.Method(
-        "GET", f"/clans/{clantag}/currentwar"
-    )
-    CLAN_CURRENT_WAR_LEAGUEGROUP: CallableWithClantag = (
-        lambda *, clantag: Methods.Method(
-            "GET", f"/clans/{clantag}/currentwar/leaguegroup"
-        )
-    )
-    CLAN_CURRENT_LEAGUE_WAR: CallableWithWartag = lambda *, wartag: Methods.Method(
-        "GET", f"/clanwarleagues/wars/{wartag}"
-    )
+    CLANS = Method("/clans")
+    """`GET`: `/clans`"""
+    CLAN = Method("/clans/{clantag}")
+    """`GET`: `/clans/{clantag:str}`"""
+    CLAN_WARLOG = Method("/clans/{clantag}/warlog")
+    """`GET`: `/clans/{clantag:str}/warlog`"""
+    CLAN_MEMBERS = Method("/clans/{clantag}/members")
+    """`GET`: `/clans/{clantag:str}/members`"""
+    CLAN_CURRENT_WAR = Method("/clans/{clantag}/currentwar")
+    """`GET`: `/clans/{clantag:str}/currentwar`"""
+    CLAN_CURRENT_WAR_LEAGUEGROUP = Method("/clans/{clantag}/currentwar/leaguegroup")
+    """`GET`: `/clans/{clantag:str}/currentwar/leaguegroup`"""
+    CLAN_CURRENT_LEAGUE_WAR = Method("/clanwarleagues/wars/{wartag}")
+    """`GET`: `/clanwarleagues/wars/{wartag:str}`"""
 
     # players
-    PLAYER: CallableWithPlayertag = lambda *, playertag: Methods.Method(
-        "GET", f"/players/{playertag}"
-    )
-    PLAYER_VERIFY_API_TOKEN: CallableWithPlayertag = (
-        lambda *, playertag: Methods.Method("GET", f"/players/{playertag}/verifytoken")
-    )
+    PLAYER = Method("/players/{playertag}")
+    """`GET`: `/players/{playertag:str}`"""
+    PLAYER_VERIFY_API_TOKEN = Method("/players/{playertag}/verifytoken", "POST")
+    """`POST`: `/players/{playertag:str}/verifytoken`"""
 
     # leagues
-    LEAGUES = lambda: Methods.Method("GET", "/leagues")
-    LEAGUE_INFO: CallableWithLeagueId = lambda *, league_id: Methods.Method(
-        "GET", f"/leagues/{league_id}"
-    )
-    LEAGUE_SEASONS: CallableWithLeagueId = lambda *, league_id: Methods.Method(
-        "GET", f"/leagues/{league_id}/seasons"
-    )
-    LEAGUE_SEASONS_RANKINGS: CallableWithLeagueIdAndSeasonId = (
-        lambda *, league_id, season_id: Methods.Method(
-            "GET", f"/leagues/{league_id}/seasons/{season_id}"
-        )
-    )
-    WARLEAGUES = lambda: Methods.Method("GET", "/warleagues")
-    WARLEAGUE_INFORMATION: CallableWithLeagueId = lambda *, league_id: Methods.Method(
-        "GET", f"/warleagues/{league_id}"
-    )
+    LEAGUES = Method("/leagues")
+    """`GET`: `/leagues`"""
+    LEAGUE_INFO = Method("/leagues/{league_id}")
+    """`GET`: `/leagues/{league_id:int}`"""
+    LEAGUE_SEASONS = Method("/leagues/{league_id}/seasons")
+    """`GET`: `/leagues/{league_id:int}/seasons`"""
+    LEAGUE_SEASONS_RANKINGS = Method("/leagues/{league_id}/seasons/{season_id}")
+    """`GET`: `/leagues/{league_id:int}/seasons/{season_id:int}`"""
+    WARLEAGUES = Method("/warleagues")
+    """`GET`: `/warleagues`"""
+    WARLEAGUE_INFORMATION = Method("/warleagues/{league_id}")
+    """`GET`: `/warleagues/{league_id:int}`"""
 
     # locations
-    LOCATIONS = lambda: Methods.Method("GET", "/locations")
-    LOCATION: CallableWithLocationId = lambda *, location_id: Methods.Method(
-        "GET", f"/locations/{location_id}"
-    )
+    LOCATIONS = Method("/locations")
+    """`GET`: `/locations`"""
+    LOCATION = Method("/locations/{location_id}")
+    """`GET`: `/locations/{location_id:int}`"""
 
     # rankings
-    CLAN_RANKINGS: CallableWithLocationId = lambda *, location_id: Methods.Method(
-        "GET", f"/locations/{location_id}/rankings/clans"
-    )
-    PLAYER_RANKINGS: CallableWithLocationId = lambda *, location_id: Methods.Method(
-        "GET", f"/locations/{location_id}/rankings/players"
-    )
-    CLAN_VERSUS_RANKINGS: CallableWithLocationId = (
-        lambda *, location_id: Methods.Method(
-            "GET", f"/locations/{location_id}/rankings/clans-versus"
-        )
-    )
-    PLAYER_VERSUS_RANKINGS: CallableWithLocationId = (
-        lambda *, location_id: Methods.Method(
-            "GET", f"/locations/{location_id}/rankings/players-versus"
-        )
-    )
+    CLAN_RANKINGS = Method("/locations/{location_id}/rankings/clans")
+    """`GET`: `/locations/{location_id:int}/rankings/clans`"""
+    PLAYER_RANKINGS = Method("/locations/{location_id}/rankings/players")
+    """`GET`: `/locations/{location_id:int}/rankings/players`"""
+    CLAN_VERSUS_RANKINGS = Method("/locations/{location_id}/rankings/clans-versus")
+    """`GET`: `/locations/{location_id:int}/rankings/clans-versus`"""
+    PLAYER_VERSUS_RANKINGS = Method("/locations/{location_id}/rankings/players-versus")
+    """`GET`: `/locations/{location_id:int}/rankings/players-versus`"""
 
     # goldpass
-    GOLDPASS = lambda: Methods.Method("GET", "/goldpass/seasons/current")
+    GOLDPASS = Method("/goldpass/seasons/current")
+    """`GET`: `/goldpass/seasons/current`"""
 
     # labels
-    CLAN_LABELS = lambda: Methods.Method("GET", "/labels/clans")
-    PLAYER_LABELS = lambda: Methods.Method("GET", "/labels/players")
+    CLAN_LABELS = Method("/labels/clans")
+    """`GET`: `/labels/clans`"""
+    PLAYER_LABELS = Method("/labels/players")
+    """`GET`: `/labels/players`"""
 
 
 # not used, but can be
 class ServiceMethods:
     class Method(BaseMethod):
         base_url = "https://developer.clashofclans.com/api"
+        default_http_method = "POST"
 
     # developer-api
-    LOGIN = lambda: ServiceMethods.Method("POST", "/login")
-    LIST_KEY = lambda: ServiceMethods.Method("POST", "/apikey/list")
-    CREATE_KEY = lambda: ServiceMethods.Method("POST", "/apikey/create")
-    REVOKE_KEY = lambda: ServiceMethods.Method("POST", "/apikey/revoke")
+    LOGIN = Method("/login")
+    """`POST`: `/login`"""
+    LIST_KEY = Method("/apikey/list")
+    """`POST`: `/apikey/list`"""
+    CREATE_KEY = Method("/apikey/create")
+    """`POST`: `/apikey/create`"""
+    REVOKE_KEY = Method("/apikey/revoke")
+    """`POST`: `/apikey/revoke`"""
 
 
 async def check_result(response: aiohttp.ClientResponse):
@@ -236,13 +208,9 @@ async def make_request(
         }
         kwargs["params"] = filtered_params
 
-    try:
-        async with session.request(
-            method=api_method.method,
-            url=api_method.url,
-            **kwargs,
-        ) as response:
-            return await check_result(response)
-    except aiohttp.ClientError as error:
-        # TODO: either custom exception for that case or integration with `ClientRequestError`
-        raise RuntimeError(error) from error
+    async with session.request(
+        method=api_method.method,  # type: ignore
+        url=api_method.url,
+        **kwargs,
+    ) as response:
+        return await check_result(response)

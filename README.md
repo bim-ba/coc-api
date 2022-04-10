@@ -23,12 +23,43 @@ import asyncio
 
 from cocapi import Client
 
-async def main():
-    client = Client('TOKEN') # your token
+client = Client('TOKEN') # your token
 
-    clans = await client.clans(name='bomb', location='ru', max_members=30)
-    print(clans)
+async def main():
+    clantags = await client.clans(name='bomb', location='ru', max_members=30)
+    print(clantags)
     # ['#2P8QU22L2', '#2PPYL9928', '#22GLLRQYY', ...]
+
+if __name__ == '__main__':
+    asyncio.run(main())
+```
+
+## Asynchronous usage
+
+```py
+import asyncio
+
+from cocapi import Client
+
+client = Client('TOKEN') # your token
+
+async def main():
+    clantags = await client.clans(name='bomb', location='ru', max_members=30)
+    
+    first_clan, second_clan, third_clan = await asyncio.gather(
+        client.clan(clantags[0]),
+        client.clan(clantags[1]),
+        client.clan(clantags[2]),
+    )
+
+    print(first_clan.name)
+    # ...
+
+    print(second_clan.description)
+    # ...
+
+    print(third_clan.location)
+    # ...
 
 if __name__ == '__main__':
     asyncio.run(main())
@@ -36,14 +67,27 @@ if __name__ == '__main__':
 
 ## Installation
 
-For now, you can install it only from source. This package will be available on PyPi
-as soon as code will be good and there will be no errors, I think now it is only a raw version. For the main branch I am using a [poetry](https://python-poetry.org/) to manage the packages, but you can use whatever you want (there are `requirements.txt` and `dev-requirements.txt` for backward comatibility).
+Now you can install it only from source. This package will be available on PyPi
+as soon as code will be a lot of tests, I think now it is only a raw version. For the main branch I am using a [poetry](https://python-poetry.org/) to manage the packages, but you can use whatever you want (there are `requirements.txt` and `dev-requirements.txt` for backward comatibility).
 
 ```shell
 git clone https://github.com/bim-ba/coc-api.git
 cd coc-api
+```
+
+### Using poetry
+
+```shell
 poetry install --no-dev
 ```
+
+### Using pip
+
+```shell
+pip install -r requirements.txt
+```
+
+### Dev requirements
 
 If you want to contribute, you need to install some dev packages.
 
@@ -51,22 +95,21 @@ If you want to contribute, you need to install some dev packages.
 poetry install
 ```
 
-## Dependencies
+or, using pip
 
-| Requirement | Version |
-| :---------- | :------ |
-| aiohttp | ^3.8.1 |
-| pydantic | ^1.9.0 |
-| pytest | _dev_. ^7.1.1 |
-| pytest-asyncio | _dev_. ^0.18.3 |
-| black | _dev_. ^22.3.0 |
+```shell
+pip install -r dev-requirements.txt
+```
 
 # Contents
 
 * [Getting started](#getting-started)
   * [Basic usage](#basic-usage)
+  * [Asynchronous usage](#asynchronous-usage)
   * [Installation](#installation)
-  * [Dependencies](#dependencies)
+    * [Using poetry](#using-poetry)
+    * [Using pip](#using-pip)
+    * [Dev requirements](#dev-requirements)
 * [General API Documentation](#general-api-documentation)
   * [Methods](#methods)
     * [clans](#method-clans)
@@ -110,9 +153,7 @@ poetry install
     * [GoldPass](#goldpass-model)
   * [Exceptions](#exceptions)
     * [ClientRequestError](#exception-client-request-error)
-    * [JSONContentTypeError](#exception-json-content-type-error)
-    * [UnknownLocationError](#exception-unknown-location-error)
-    * [UnknownClanLabelError](#exception-unknown-clan-label-error)
+    * [UnknownDataError](#exception-unknown-data-error)
   * [Aliases](#aliases)
     * [Tag](#alias-tag)
     * [ClanType](#alias-clan-type)
@@ -645,9 +686,9 @@ This model describes information about current war.
 | :---- | :--: | :---------- |
 | clan | [`ClanWarInfoClan`](#clan-war-info-clan-model) | Current war information about this clan |
 | opponent | [`ClanWarInfoClan`](#clan-war-info-clan-model) | Current war information about opponent clan |
-| start_time | [`datetime.datetime`](https://docs.python.org/3/library/datetime.html#datetime-objects) \| `None` | _optional_. Current war start time (UTC). `None` if ... #TODO <br/> _pendulum may be good here_ |
-| end_time | [`datetime.datetime`](https://docs.python.org/3/library/datetime.html#datetime-objects) \| `None` | _optional_. Current war end time (UTC). `None` if ... #TODO <br/> _pendulum may be good here_ |
-| preparation_start_time | [`datetime.datetime`](https://docs.python.org/3/library/datetime.html#datetime-objects) \| `None` | _optional_. Current war preparation start time (UTC). `None` if ... #TODO <br/> _pendulum may be good here_ |
+| start_time | [`datetime.datetime`](https://docs.python.org/3/library/datetime.html#datetime-objects) \| `None` | _optional_. Current war start time (UTC). `None` if ... #TODO |
+| end_time | [`datetime.datetime`](https://docs.python.org/3/library/datetime.html#datetime-objects) \| `None` | _optional_. Current war end time (UTC). `None` if ... #TODO |
+| preparation_start_time | [`datetime.datetime`](https://docs.python.org/3/library/datetime.html#datetime-objects) \| `None` | _optional_. Current war preparation start time (UTC). `None` if ... #TODO |
 | team_size | `int` \| `None` | _optional_. Clan team size in current war. `None` if ... #TODO |
 | attacks_per_member | `int` \| `None` | _optional_. How many attacks one member can perform. `None` if ... #TODO |
 
@@ -727,7 +768,7 @@ This model describes information about current gold pass.
 
 ## Exceptions
 
-<h3 id="client-request-error"><code>ClientRequestError</code></h3>
+<h3 id="exception-client-request-error"><code>ClientRequestError</code></h3>
 
 Raises when something went wrong while making request.
 
@@ -737,14 +778,14 @@ Raises when something went wrong while making request.
 | message | `str` | _vary_. Detailed message on whats going on |
 | data | `Any` \| `None` | _optional_. Extra data about response from server |
 
-<h3 id="client-request-error"><code>IncorrectParameters</code></h3>
-<h3 id="client-request-error"><code>AccessDenied</code></h3>
-<h3 id="client-request-error"><code>ResourceNotFound</code></h3>
-<h3 id="client-request-error"><code>TooManyRequests</code></h3>
-<h3 id="client-request-error"><code>UnknownError</code></h3>
-<h3 id="client-request-error"><code>ServiceUnavailable</code></h3>
+<h3 id="exception-incorrect-parameters"><code>IncorrectParameters</code></h3>
+<h3 id="exception-access-denied"><code>AccessDenied</code></h3>
+<h3 id="exception-resource-not-found"><code>ResourceNotFound</code></h3>
+<h3 id="exception-too-many-requests"><code>TooManyRequests</code></h3>
+<h3 id="exception-unknown-error"><code>UnknownError</code></h3>
+<h3 id="exception-service-unavailable"><code>ServiceUnavailable</code></h3>
 
-<h3 id="client-request-error"><code>UnknownDataError</code></h3>
+<h3 id="exception-unknown-data-error"><code>UnknownDataError</code></h3>
 
 Raises when something went wrong while passing some data to method.
 
@@ -753,11 +794,11 @@ Raises when something went wrong while passing some data to method.
 | data | `Any` | Data that has been passed |
 | message | `str` \| `None` | _optional_. _vary_. Detailed message on whats going on |
 
-<h3 id="client-request-error"><code>UnknownLocationError</code></h3>
-<h3 id="client-request-error"><code>UnknownClanLabelError</code></h3>
-<h3 id="client-request-error"><code>UnknownClanLeagueError</code></h3>
-<h3 id="client-request-error"><code>UnknownPlayerLabelError</code></h3>
-<h3 id="client-request-error"><code>UnknownPlayerLeagueError</code></h3>
+<h3 id="exception-unknown-location-error"><code>UnknownLocationError</code></h3>
+<h3 id="exception-unknown-clan-label-error"><code>UnknownClanLabelError</code></h3>
+<h3 id="exception-unknown-clan-league-error"><code>UnknownClanLeagueError</code></h3>
+<h3 id="exception-unknown-player-label-error"><code>UnknownPlayerLabelError</code></h3>
+<h3 id="exception-unknown-player-league-error"><code>UnknownPlayerLeagueError</code></h3>
 
 ## Aliases
 
@@ -864,15 +905,7 @@ According to the original [API](https://developer.clashofclans.com/#/documentati
 | `GET` | `/locations/{locationId}/rankings/players-versus` | :heavy_check_mark: ([player_versus_rankings](#method-player-versus-rankings)) | Get player versus rankings for specific location |
 |||||
 | `GET` | `/goldpass/seasons/current` | :heavy_check_mark: ([goldpass](#method-goldpass)) | Get information about the current gold pass season |
-|||||
-| `POST` | `/login` | :heavy_check_mark: ([login](#method-login)) | Log into account using credentials |
-|||||
-| `POST` | `/apikey/list` | :heavy_check_mark: ([list_keys](#method-list-keys)) | List all account keys |
-| `POST` | `/apikey/create` | :heavy_check_mark: ([create_key](#method-create-key)) | Create key for account |
-| `POST` | `/apikey/revoke` | :heavy_check_mark: ([revoke_key](#method-revoke-key)) | Remove key from account |
 
 # TODO
 
-* [x] `tests.py`
-  * [ ] Testing under _Python <=3.9_
-* [ ] Pendulum instead of standard datetime (is it worth it?)
+* [ ] Event system
